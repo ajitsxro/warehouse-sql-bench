@@ -1,0 +1,13 @@
+# secrets
+.env
+
+# python
+.venv/
+__pycache__/
+*.pyc
+
+# mlflow
+mlruns/
+
+# os
+.DS_Store
