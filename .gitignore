@@ -20,3 +20,7 @@ CLAUDE.md
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+
+# run outputs stay local; only the directory itself is tracked
+results/*
+!results/.gitkeep
