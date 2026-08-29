@@ -1,6 +1,11 @@
+import re
 import subprocess
 import sys
 from pathlib import Path
+
+# Typer forces colored output when GITHUB_ACTIONS or FORCE_COLOR is set, which
+# puts escape codes between words, so compare against the plain text.
+ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
 
 
 def test_bench_help_runs_installed_entry_point() -> None:
@@ -14,4 +19,5 @@ def test_bench_help_runs_installed_entry_point() -> None:
         check=False,
     )
     assert completed.returncode == 0, completed.stderr
-    assert "Usage: bench" in completed.stdout
+    plain_output = ANSI_ESCAPE.sub("", completed.stdout)
+    assert "Usage: bench" in plain_output
