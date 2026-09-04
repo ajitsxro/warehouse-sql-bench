@@ -11,6 +11,7 @@ dependencies = [
     "pydantic>=2.7",
     "python-dotenv>=1.0",
     "pyyaml>=6.0",
+    "sqlglot>=30.29.0",
     "typer>=0.12",
 ]
 
@@ -37,6 +38,8 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM"]
+# Project style prefers explicit if/else blocks over ternaries.
+ignore = ["SIM108"]
 
 [tool.mypy]
 python_version = "3.11"
@@ -45,3 +48,8 @@ files = ["src", "tests"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[[tool.mypy.overrides]]
+# pyarrow ships no type information.
+module = ["pyarrow", "pyarrow.*"]
+ignore_missing_imports = true
