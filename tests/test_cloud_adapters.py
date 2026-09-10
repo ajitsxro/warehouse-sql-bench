@@ -13,7 +13,7 @@ from snowflake.connector.errors import ProgrammingError
 
 from sqlbench.settings import MissingEnvError
 from sqlbench.warehouses.base import Column, ErrorCategory
-from sqlbench.warehouses.databricks_warehouse import DatabricksWarehouse
+from sqlbench.warehouses.databricks_warehouse import DatabricksWarehouse, connect_from_env
 from sqlbench.warehouses.snowflake_warehouse import SnowflakeWarehouse
 
 
@@ -213,3 +213,20 @@ def test_missing_credentials_raise_before_any_network_call(
         SnowflakeWarehouse().execute("SELECT 1", timeout_s=30)
     with pytest.raises(MissingEnvError, match="DATABRICKS_SERVER_HOSTNAME"):
         DatabricksWarehouse().execute("SELECT 1", timeout_s=30)
+
+
+def test_databricks_connect_caps_retries(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DATABRICKS_SERVER_HOSTNAME", "example.cloud.databricks.com")
+    monkeypatch.setenv("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/abc")
+    monkeypatch.setenv("DATABRICKS_TOKEN", "not-a-real-token")
+    captured: dict[str, Any] = {}
+
+    def fake_connect(**kwargs: Any) -> None:
+        captured.update(kwargs)
+
+    monkeypatch.setattr("databricks.sql.connect", fake_connect)
+
+    connect_from_env()
+
+    assert captured["_retry_stop_after_attempts_count"] == 3
+    assert captured["_retry_stop_after_attempts_duration"] == 30

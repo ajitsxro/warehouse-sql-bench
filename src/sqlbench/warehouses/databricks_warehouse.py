@@ -26,6 +26,10 @@ ENV_VARS = ["DATABRICKS_SERVER_HOSTNAME", "DATABRICKS_HTTP_PATH", "DATABRICKS_TO
 # backstop in case the cancel request is lost, so the client normally fires
 # first and the failure is reliably reported as a timeout.
 SERVER_TIMEOUT_MARGIN_S = 10
+# The connector retries failed requests for up to 15 minutes by default, so a
+# bad hostname or TLS problem would hang far past any query timeout.
+CONNECT_RETRY_ATTEMPTS = 3
+CONNECT_RETRY_BUDGET_S = 30
 # Databricks exposes no SQLSTATE attribute; it is only in the message text.
 SQLSTATE_PATTERN = re.compile(r"SQLSTATE: ([0-9A-Z]{5})")
 
@@ -44,6 +48,8 @@ def connect_from_env() -> DatabricksConnection:
         server_hostname=env["DATABRICKS_SERVER_HOSTNAME"],
         http_path=env["DATABRICKS_HTTP_PATH"],
         access_token=env["DATABRICKS_TOKEN"],
+        _retry_stop_after_attempts_count=CONNECT_RETRY_ATTEMPTS,
+        _retry_stop_after_attempts_duration=CONNECT_RETRY_BUDGET_S,
     )
 
 
