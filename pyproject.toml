@@ -6,6 +6,7 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
+    "databricks-sql-connector>=4.9.0",
     "duckdb>=1.1",
     "pyarrow>=17",
     "pydantic>=2.7",
@@ -46,6 +47,8 @@ ignore = ["SIM108"]
 python_version = "3.11"
 strict = true
 files = ["src", "tests"]
+# databricks-sql-connector declares no types on its exception constructors.
+untyped_calls_exclude = ["databricks.sql.exc"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

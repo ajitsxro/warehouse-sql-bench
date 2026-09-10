@@ -1,15 +1,19 @@
-"""The Snowflake adapter runs against a fake connection; no network access."""
+"""Snowflake and Databricks adapters run against fake connections; no network access."""
 
+import threading
 from types import TracebackType
 from typing import Any, cast
 
 import pyarrow as pa
 import pytest
+from databricks.sql.client import Connection as DatabricksConnection
+from databricks.sql.exc import ServerOperationError
 from snowflake.connector import SnowflakeConnection
 from snowflake.connector.errors import ProgrammingError
 
 from sqlbench.settings import MissingEnvError
 from sqlbench.warehouses.base import Column, ErrorCategory
+from sqlbench.warehouses.databricks_warehouse import DatabricksWarehouse
 from sqlbench.warehouses.snowflake_warehouse import SnowflakeWarehouse
 
 
@@ -40,6 +44,12 @@ class FakeCursor:
 
     def fetch_arrow_all(self, **kwargs: Any) -> pa.Table:
         return self.table
+
+    def fetchall_arrow(self) -> pa.Table:
+        return self.table
+
+    def cancel(self) -> None:
+        return None
 
 
 class FakeConnection:
@@ -129,10 +139,77 @@ def test_snowflake_close_closes_the_open_connection() -> None:
     assert opened[0].closed
 
 
+class HangingDatabricksCursor(FakeCursor):
+    """Blocks in execute until cancel() is called, like a stuck warehouse query."""
+
+    def __init__(self) -> None:
+        super().__init__([], pa.table({}))
+        self.cancelled = threading.Event()
+
+    def execute(self, sql: str) -> None:
+        self.executed.append(sql)
+        if sql.startswith("SET "):
+            return
+        # The 5s wait only matters if cancel never arrives; the test would then fail.
+        self.cancelled.wait(timeout=5)
+        raise ServerOperationError("Query was cancelled", {})
+
+    def cancel(self) -> None:
+        self.cancelled.set()
+
+
+def make_databricks(cursor: FakeCursor) -> DatabricksWarehouse:
+    def connect() -> DatabricksConnection:
+        return cast(DatabricksConnection, FakeConnection(cursor))
+
+    return DatabricksWarehouse(connect)
+
+
+def test_databricks_returns_rows_and_sets_server_timeout_with_margin() -> None:
+    cursor = FakeCursor([("n", "int", None, None, None, None, True)], pa.table({"n": [7]}))
+    warehouse = make_databricks(cursor)
+
+    result = warehouse.execute("SELECT 7 AS n", timeout_s=30)
+
+    assert result.error is None
+    assert result.columns == [Column("n", "int")]
+    assert result.rows == [(7,)]
+    assert cursor.executed == ["SET STATEMENT_TIMEOUT = 40", "SELECT 7 AS n"]
+
+
+def test_databricks_client_side_timeout_cancels_and_reports_timeout() -> None:
+    cursor = HangingDatabricksCursor()
+    warehouse = make_databricks(cursor)
+
+    result = warehouse.execute("SELECT * FROM huge", timeout_s=1)
+
+    assert cursor.cancelled.is_set()
+    assert result.error is not None
+    assert result.error.category == ErrorCategory.TIMEOUT
+    assert 900 <= result.elapsed_ms < 4000
+
+
+def test_databricks_server_error_uses_sqlstate() -> None:
+    cursor = FakeCursor([], pa.table({}))
+    cursor.errors["SELECT * FROM missing"] = ServerOperationError(
+        "[TABLE_OR_VIEW_NOT_FOUND] The table or view `missing` cannot be found. SQLSTATE: 42P01",
+        {},
+    )
+    warehouse = make_databricks(cursor)
+
+    result = warehouse.execute("SELECT * FROM missing", timeout_s=30)
+
+    assert result.error is not None
+    assert result.error.category == ErrorCategory.SYNTAX
+
+
 def test_missing_credentials_raise_before_any_network_call(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("SNOWFLAKE_ACCOUNT", raising=False)
+    for name in ["SNOWFLAKE_ACCOUNT", "DATABRICKS_SERVER_HOSTNAME"]:
+        monkeypatch.delenv(name, raising=False)
 
     with pytest.raises(MissingEnvError, match="SNOWFLAKE_ACCOUNT"):
         SnowflakeWarehouse().execute("SELECT 1", timeout_s=30)
+    with pytest.raises(MissingEnvError, match="DATABRICKS_SERVER_HOSTNAME"):
+        DatabricksWarehouse().execute("SELECT 1", timeout_s=30)

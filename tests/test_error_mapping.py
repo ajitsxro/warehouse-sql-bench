@@ -1,7 +1,10 @@
 import pytest
+from databricks.sql.exc import Error as DatabricksError
+from databricks.sql.exc import RequestError, ServerOperationError
 from snowflake.connector.errors import DatabaseError, ProgrammingError
 
 from sqlbench.warehouses.base import ErrorCategory
+from sqlbench.warehouses.databricks_warehouse import categorize_databricks_error
 from sqlbench.warehouses.snowflake_warehouse import categorize_snowflake_error
 from sqlbench.warehouses.sqlstate import category_from_sqlstate
 
@@ -61,3 +64,32 @@ def test_snowflake_cancel_is_timeout_even_without_sqlstate() -> None:
 def test_snowflake_connection_failure_is_other() -> None:
     error = DatabaseError(msg="Failed to connect to DB", errno=250001, sqlstate="08001")
     assert categorize_snowflake_error(error) == ErrorCategory.OTHER
+
+
+@pytest.mark.parametrize(
+    ("message", "category"),
+    [
+        ("[PARSE_SYNTAX_ERROR] Syntax error at or near 'SELEC'. SQLSTATE: 42601", "syntax"),
+        (
+            "[TABLE_OR_VIEW_NOT_FOUND] The table or view `missing` cannot be found. "
+            "SQLSTATE: 42P01; line 1 pos 14",
+            "syntax",
+        ),
+        ("[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column ... SQLSTATE: 42703", "syntax"),
+        ("[DIVIDE_BY_ZERO] Division by zero. Use `try_divide`. SQLSTATE: 22012", "runtime"),
+        ("[CAST_INVALID_INPUT] The value 'abc' cannot be cast. SQLSTATE: 22018", "runtime"),
+        ("[INSUFFICIENT_PERMISSIONS] Insufficient privileges. SQLSTATE: 42501", "permission"),
+    ],
+)
+def test_databricks_server_errors_use_sqlstate_from_message(message: str, category: str) -> None:
+    error = ServerOperationError(message, {"operation-id": "test"})
+    assert categorize_databricks_error(error) == ErrorCategory(category)
+
+
+def test_databricks_error_without_sqlstate_is_other() -> None:
+    error = RequestError("Error during request to server: connection reset")
+    assert categorize_databricks_error(error) == ErrorCategory.OTHER
+
+
+def test_databricks_error_with_no_message_does_not_crash() -> None:
+    assert categorize_databricks_error(DatabricksError()) == ErrorCategory.OTHER
