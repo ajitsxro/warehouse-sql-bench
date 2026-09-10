@@ -3,6 +3,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+from typer.testing import CliRunner
+
+from sqlbench.cli import app
+
 # Typer forces colored output when GITHUB_ACTIONS or FORCE_COLOR is set, which
 # puts escape codes between words, so compare against the plain text.
 ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
@@ -21,3 +25,16 @@ def test_bench_help_runs_installed_entry_point() -> None:
     assert completed.returncode == 0, completed.stderr
     plain_output = ANSI_ESCAPE.sub("", completed.stdout)
     assert "Usage: bench" in plain_output
+
+
+def test_ping_duckdb_prints_latency() -> None:
+    result = CliRunner().invoke(app, ["ping", "--warehouse", "duckdb"])
+
+    assert result.exit_code == 0, result.output
+    assert re.fullmatch(r"duckdb: ok, SELECT 1 took \d+ ms\n", result.output)
+
+
+def test_ping_rejects_unknown_warehouse() -> None:
+    result = CliRunner().invoke(app, ["ping", "--warehouse", "postgres"])
+
+    assert result.exit_code == 2
