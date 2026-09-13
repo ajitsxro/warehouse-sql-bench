@@ -1,6 +1,8 @@
 # Warehouse SQL Bench
 
-Warehouse SQL Bench measures how accurately LLMs turn natural-language questions into SQL on Snowflake and on Databricks. Each generated query is run on the warehouse and its result set is compared with the result of a hand-verified gold query. Questions are split between portable SQL and features specific to each warehouse's dialect.
+Warehouse SQL Bench measures how accurately LLMs turn natural-language questions into SQL on Snowflake and on Databricks.
+
+The same questions run on identical data in both warehouses, so the comparison isolates the SQL dialect. Each prediction is scored by its result set against gold SQL, on a realistic dataset and on a small edge-case dataset.
 
 Status: in development.
 
