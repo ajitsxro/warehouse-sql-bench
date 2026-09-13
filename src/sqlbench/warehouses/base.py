@@ -21,13 +21,15 @@ class ErrorCategory(StrEnum):
     SYNTAX covers everything rejected before the query runs: parse errors and
     compile errors such as an unknown column or table. RUNTIME covers failures
     while the query runs, such as a bad cast or a scalar subquery returning
-    several rows.
+    several rows. BLOCKED means the read-only guard refused the SQL, so it never
+    reached the warehouse; PERMISSION is only for errors the warehouse returns.
     """
 
     SYNTAX = "syntax"
     RUNTIME = "runtime"
     TIMEOUT = "timeout"
     PERMISSION = "permission"
+    BLOCKED = "blocked"
     OTHER = "other"
 
 

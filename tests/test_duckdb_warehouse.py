@@ -94,6 +94,6 @@ def test_guard_blocks_writes_before_they_reach_duckdb(warehouse: DuckDBWarehouse
     result = warehouse.execute("DROP TABLE orders", timeout_s=10)
 
     assert result.error is not None
-    assert result.error.category == ErrorCategory.PERMISSION
+    assert result.error.category == ErrorCategory.BLOCKED
     still_there = warehouse.execute("SELECT count(*) FROM orders", timeout_s=10)
     assert still_there.rows == [(2,)]
