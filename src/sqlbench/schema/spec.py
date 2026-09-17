@@ -1,9 +1,11 @@
-"""Pydantic models for schemas/<name>.yaml."""
+"""Pydantic models for schemas/<name>.yaml, plus cross-table checks."""
 
 import datetime
 from functools import cached_property
+from pathlib import Path
 from typing import Literal
 
+import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from sqlbench.schema.types import (
@@ -243,3 +245,80 @@ class TableSpec(StrictModel):
             if self.column(anchor_name).logical_type.kind != column.logical_type.kind:
                 raise ValueError(f"{column.name}: after must name a column of the same type")
         return self
+
+
+class SchemaSpec(StrictModel):
+    name: str = Field(pattern=NAME_PATTERN)
+    description: str
+    tables: list[TableSpec] = Field(min_length=1)
+
+    def table(self, name: str) -> TableSpec:
+        for table in self.tables:
+            if table.name == name:
+                return table
+        raise KeyError(f"{self.name} has no table {name}")
+
+    @model_validator(mode="after")
+    def check_references(self) -> "SchemaSpec":
+        names = [table.name for table in self.tables]
+        if len(names) != len(set(names)):
+            raise ValueError("duplicate table names")
+        for table in self.tables:
+            for column in table.columns:
+                if column.references is not None:
+                    check_reference(self, table, column, column.references)
+        self.tables_in_dependency_order()
+        return self
+
+    def tables_in_dependency_order(self) -> list[TableSpec]:
+        """Parents before children, so foreign keys can pick from generated parents."""
+        ordered: list[TableSpec] = []
+        placed: set[str] = set()
+        remaining = list(self.tables)
+        while remaining:
+            ready = [table for table in remaining if parents_of(table) <= placed]
+            if not ready:
+                stuck = ", ".join(table.name for table in remaining)
+                raise ValueError(f"foreign keys form a cycle among: {stuck}")
+            for table in ready:
+                ordered.append(table)
+                placed.add(table.name)
+                remaining.remove(table)
+        return ordered
+
+
+def parents_of(table: TableSpec) -> set[str]:
+    parents: set[str] = set()
+    for column in table.columns:
+        if column.references is not None:
+            parents.add(column.references.split(".")[0])
+    return parents
+
+
+def check_reference(schema: SchemaSpec, table: TableSpec, column: ColumnSpec, target: str) -> None:
+    where = f"{table.name}.{column.name}"
+    parts = target.split(".")
+    if len(parts) != 2:
+        raise ValueError(f"{where}: references must look like table.column")
+    target_table_name, target_column_name = parts
+    if target_table_name == table.name:
+        raise ValueError(f"{where}: self-references are not supported")
+    try:
+        target_table = schema.table(target_table_name)
+    except KeyError:
+        raise ValueError(f"{where}: unknown table {target_table_name}") from None
+    if target_table.primary_key != target_column_name:
+        raise ValueError(f"{where}: {target} is not the primary key of {target_table_name}")
+    target_kind = target_table.column(target_column_name).logical_type.kind
+    if target_kind != column.logical_type.kind:
+        raise ValueError(f"{where}: type differs from {target}")
+
+
+def load_schema(path: Path) -> SchemaSpec:
+    """Load and validate one schema file. Raises ValueError or pydantic.ValidationError."""
+    with path.open() as handle:
+        raw = yaml.safe_load(handle)
+    schema = SchemaSpec.model_validate(raw)
+    if schema.name != path.stem:
+        raise ValueError(f"{path.name}: schema name {schema.name!r} must match the file name")
+    return schema
