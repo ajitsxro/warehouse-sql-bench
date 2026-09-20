@@ -7,6 +7,8 @@ import typer
 import yaml
 from dotenv import load_dotenv
 
+from sqlbench.datagen.generator import generate_dataset
+from sqlbench.datagen.tables import Profile
 from sqlbench.schema.spec import load_schema
 from sqlbench.settings import MissingEnvError
 from sqlbench.warehouses.base import Warehouse, WarehouseName
@@ -16,10 +18,15 @@ from sqlbench.warehouses.snowflake_warehouse import SnowflakeWarehouse
 
 PING_TIMEOUT_S = 60
 SCHEMAS_DIR = Path("schemas")
+DATA_DIR = Path("data")
+MANIFESTS_DIR = Path("manifests")
+DEFAULT_SEED = 20261105
 
 app = typer.Typer(name="bench", no_args_is_help=True)
 schema_app = typer.Typer(no_args_is_help=True, help="Check schema specs.")
 app.add_typer(schema_app, name="schema")
+data_app = typer.Typer(no_args_is_help=True, help="Generate benchmark data.")
+app.add_typer(data_app, name="data")
 
 
 @app.callback()
@@ -94,3 +101,26 @@ def validate_schemas(
         )
     if failed:
         raise typer.Exit(code=1)
+
+
+@data_app.command("generate")
+def generate_data(
+    profile: Annotated[
+        Profile, typer.Option(help="main is realistic; edge is small and adversarial.")
+    ],
+    schema: Annotated[str | None, typer.Option(help="Schema to generate.")] = None,
+    all_schemas: Annotated[bool, typer.Option("--all", help="Generate every schema.")] = False,
+    seed: Annotated[int, typer.Option(help="Same seed, same files.")] = DEFAULT_SEED,
+    schemas_dir: Annotated[Path, typer.Option("--dir")] = SCHEMAS_DIR,
+    data_dir: Annotated[Path, typer.Option()] = DATA_DIR,
+    manifest_dir: Annotated[Path, typer.Option()] = MANIFESTS_DIR,
+) -> None:
+    """Write Parquet files under data/ and a manifest under manifests/."""
+    if (schema is None) == (not all_schemas):
+        typer.echo("pass exactly one of --schema NAME or --all", err=True)
+        raise typer.Exit(code=2)
+
+    for path in schema_paths(schemas_dir, schema):
+        manifest = generate_dataset(path, profile, seed, data_dir, manifest_dir)
+        total_rows = sum(table.rows for table in manifest.tables.values())
+        typer.echo(f"{manifest.schema_name} ({profile}): {total_rows:,} rows written")

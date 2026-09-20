@@ -21,6 +21,9 @@ CLAUDE.md
 .pytest_cache/
 .ruff_cache/
 
+# generated Parquet; manifests/ records hashes and is committed
+data/
+
 # run outputs stay local; only the directory itself is tracked
 results/*
 !results/.gitkeep
