@@ -10,9 +10,11 @@ import pytest
 from sqlbench.datagen.values import (
     derive_seed,
     fill_pattern,
+    generate_after,
+    generate_shape_value,
     generate_values,
 )
-from sqlbench.schema.spec import ColumnSpec, load_schema
+from sqlbench.schema.spec import ColumnSpec, JsonShape, load_schema
 
 SCHEMA = load_schema(Path(__file__).parent / "fixtures" / "mini_shop.yaml")
 ORDERS = SCHEMA.table("orders")
@@ -36,10 +38,7 @@ def test_derive_seed_is_stable_and_sensitive_to_every_part() -> None:
     assert derive_seed("a") == 0xCA978112CA1BBDCA
 
 
-SCALAR_COLUMNS = [c.name for c in ORDERS.columns if c.gen.after is None and c.gen.shape is None]
-
-
-@pytest.mark.parametrize("name", SCALAR_COLUMNS)
+@pytest.mark.parametrize("name", [c.name for c in ORDERS.columns if c.gen.after is None])
 def test_same_seed_gives_same_values(name: str) -> None:
     target = ORDERS.column(name)
     parents = list(range(1, 51)) if target.references else None
@@ -153,6 +152,17 @@ def test_timestamps_respect_bounds_and_timezone_kind() -> None:
     assert max(ntz) <= datetime.datetime(2024, 12, 31)
 
 
+def test_after_values_follow_their_anchor_within_the_gap() -> None:
+    anchors: list[Any] = [datetime.datetime(2024, 1, 1), None] * 500
+    shipped = generate_after(ORDERS.column("shipped_at"), anchors, seed=1)
+
+    for anchor, value in zip(anchors, shipped, strict=True):
+        if anchor is None:
+            assert value is None
+        elif value is not None:
+            assert anchor <= value <= anchor + datetime.timedelta(days=10)
+
+
 def test_faker_pool_limits_cardinality() -> None:
     values = generate_values(SCHEMA.table("customers").column("full_name"), 5000, seed=1)
 
@@ -172,3 +182,23 @@ def test_fill_pattern() -> None:
     assert value[:4] == "SKU-"
     assert value[4:6].isdigit()
     assert value[7:].isalpha() and value[7:].isupper()
+
+
+def test_shapes_leave_out_optional_keys_and_respect_array_lengths() -> None:
+    shape = ORDERS.column("attributes").gen.shape
+    assert shape is not None
+    rng = random.Random(1)
+    values = [generate_shape_value(shape, rng) for _ in range(2000)]
+
+    assert all("channel" in value for value in values)
+    assert any("coupon" not in value for value in values)
+    assert any("coupon" in value for value in values)
+    assert all(1 <= len(value["items"]) <= 4 for value in values)
+    gifts = [value["gift"] for value in values if "gift" in value]
+    assert None in gifts and True in gifts
+
+
+def test_shape_null_rate_gives_json_null() -> None:
+    shape = JsonShape.model_validate({"type": "int", "null_rate": 1.0})
+
+    assert generate_shape_value(shape, random.Random(1)) is None
