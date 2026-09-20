@@ -8,6 +8,8 @@ requires-python = ">=3.11"
 dependencies = [
     "databricks-sql-connector>=4.9.0",
     "duckdb>=1.1",
+    "faker>=40.44.0",
+    "numpy>=2.4.6",
     "pyarrow>=17",
     "pydantic>=2.7",
     "python-dotenv>=1.0",
