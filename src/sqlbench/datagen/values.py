@@ -23,6 +23,13 @@ FAKER_LOCALE = "en_US"
 DEFAULT_FAKER_POOL = 5000
 
 
+class JsonNull:
+    """A VARIANT whose value is JSON null, as opposed to SQL NULL (None)."""
+
+
+JSON_NULL = JsonNull()
+
+
 def derive_seed(*parts: object) -> int:
     """Stable 64-bit seed from names; Python's hash() changes between runs."""
     text = ":".join(str(part) for part in parts)
