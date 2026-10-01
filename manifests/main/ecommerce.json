@@ -1,0 +1,35 @@
+{
+  "schema_name": "ecommerce",
+  "profile": "main",
+  "seed": 20261105,
+  "generator_version": 1,
+  "spec_sha256": "e1d23221bb54047bb6ca34ba228bfa84cb2eda5661fbb6910d9275fb6e4fd048",
+  "pyarrow_version": "26.0.0",
+  "tables": {
+    "customers": {
+      "rows": 50000,
+      "sha256": "4c756691c8f2805769dd3e2c87e6b536a915b703e38c6feba6facda6cca75061",
+      "injectors": []
+    },
+    "products": {
+      "rows": 5000,
+      "sha256": "7a94559c0d307c6d8ba0b9b5d7dd9866a15621f27d9423d23404dc5ca725455b",
+      "injectors": []
+    },
+    "orders": {
+      "rows": 200000,
+      "sha256": "74087020620521f63dc8064c1f792a4253ddd31ed4645ee4e74e9eb2ef441553",
+      "injectors": []
+    },
+    "order_items": {
+      "rows": 500000,
+      "sha256": "5cf409fda0a7e3a20500bd6dbc8270e0cbfed092dfe7ba41304099bc749d1049",
+      "injectors": []
+    },
+    "returns": {
+      "rows": 15000,
+      "sha256": "ba266bc5e7028ab693590fc5e9d23e233422b599fad44c3b523fd16207fac320",
+      "injectors": []
+    }
+  }
+}

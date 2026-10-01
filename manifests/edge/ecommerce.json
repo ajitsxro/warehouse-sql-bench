@@ -1,0 +1,62 @@
+{
+  "schema_name": "ecommerce",
+  "profile": "edge",
+  "seed": 20261105,
+  "generator_version": 1,
+  "spec_sha256": "e1d23221bb54047bb6ca34ba228bfa84cb2eda5661fbb6910d9275fb6e4fd048",
+  "pyarrow_version": "26.0.0",
+  "tables": {
+    "customers": {
+      "rows": 300,
+      "sha256": "78296422069d779cac7c9dedea9e948c9ae7a2376191a746502e4950ff4ab591",
+      "injectors": [
+        "empty_groups",
+        "nulls",
+        "boundary_dates",
+        "messy_strings"
+      ]
+    },
+    "products": {
+      "rows": 150,
+      "sha256": "7332a21bff29cb980a394770e44b7c2fe2c5b7f8fbebf9b0cba25fded9d799b1",
+      "injectors": [
+        "empty_groups",
+        "boundary_dates",
+        "semi_structured",
+        "messy_strings",
+        "ties"
+      ]
+    },
+    "orders": {
+      "rows": 600,
+      "sha256": "44bf370291b3336176358912b9817c0875c4ce4fcbf40400f5ca5be815bf0e3b",
+      "injectors": [
+        "empty_groups",
+        "nulls",
+        "boundary_dates",
+        "semi_structured",
+        "messy_strings",
+        "ties"
+      ]
+    },
+    "order_items": {
+      "rows": 1500,
+      "sha256": "b586a101f21fe58444df18b03f2bf9844cb1278029513fd736149f91c99d4a14",
+      "injectors": [
+        "empty_groups",
+        "nulls",
+        "ties"
+      ]
+    },
+    "returns": {
+      "rows": 150,
+      "sha256": "704158887d0273647925794ba4ae0150cf29549f01d381dd831ca72eae48ce8e",
+      "injectors": [
+        "nulls",
+        "boundary_dates",
+        "messy_strings",
+        "ties"
+      ]
+    }
+  }
+}

@@ -1,0 +1,180 @@
+name: ecommerce
+description: >
+  An online store: customers place orders made of line items for products,
+  and some line items are returned. orders.attributes holds the checkout
+  payload as semi-structured JSON, including a snapshot of the cart items.
+
+tables:
+  - name: customers
+    rows: 50000
+    edge_rows: 300
+    primary_key: customer_id
+    columns:
+      - {name: customer_id, type: bigint, gen: {distribution: sequence}}
+      - {name: email, type: string, gen: {faker: email, cardinality: 50000}}
+      - {name: full_name, type: string, gen: {faker: name, cardinality: 30000}}
+      - name: country
+        type: string
+        gen:
+          values: [US, CA, GB, DE, FR, IN, BR, AU]
+          weights: [40, 8, 12, 10, 8, 10, 7, 5]
+      - {name: city, type: string, gen: {faker: city, cardinality: 2000}}
+      - name: segment
+        type: string
+        gen: {values: [consumer, small_business, enterprise], weights: [80, 15, 5]}
+      - {name: signup_date, type: date, gen: {min: 2021-01-01, max: 2024-12-31}}
+      - {name: marketing_opt_in, type: bool}
+      - name: loyalty_tier
+        type: string
+        nullable: true
+        description: NULL for customers who never joined the loyalty program.
+        gen:
+          values: [bronze, silver, gold, platinum]
+          weights: [50, 30, 15, 5]
+          null_rate: 0.4
+
+  - name: products
+    rows: 5000
+    edge_rows: 150
+    primary_key: product_id
+    columns:
+      - {name: product_id, type: bigint, gen: {distribution: sequence}}
+      - {name: sku, type: string, gen: {pattern: "SKU-#####"}}
+      - {name: product_name, type: string, gen: {faker: catch_phrase, cardinality: 5000}}
+      - name: category
+        type: string
+        gen:
+          values: [electronics, home, apparel, beauty, sports, toys, grocery, books]
+          weights: [15, 18, 20, 10, 10, 7, 12, 8]
+      - {name: brand, type: string, gen: {faker: company, cardinality: 300}}
+      - name: list_price
+        type: decimal(10,2)
+        gen: {distribution: lognormal, mean: 3.4, sigma: 0.9, min: 1, max: 5000}
+      - {name: launched_on, type: date, gen: {min: 2018-01-01, max: 2024-11-30}}
+      - {name: is_active, type: bool}
+      - name: tags
+        type: array<string>
+        gen:
+          shape:
+            type: array
+            max_items: 3
+            element: {type: string, values: [new, sale, bestseller, eco, limited]}
+      - name: specs
+        type: map<string,string>
+        gen:
+          shape:
+            type: object
+            fields:
+              color: {type: string, values: [black, white, red, blue, green], optional: 0.4}
+              size: {type: string, values: [XS, S, M, L, XL], optional: 0.6}
+              material: {type: string, values: [cotton, steel, plastic, wood], optional: 0.5}
+
+  - name: orders
+    rows: 200000
+    edge_rows: 600
+    primary_key: order_id
+    columns:
+      - {name: order_id, type: bigint, gen: {distribution: sequence}}
+      - name: customer_id
+        type: bigint
+        references: customers.customer_id
+        gen: {distribution: zipf, exponent: 1.1}
+      - {name: placed_at, type: timestamp_ntz, gen: {min: 2022-01-01, max: 2024-12-31}}
+      - name: status
+        type: string
+        gen:
+          values: [placed, shipped, delivered, cancelled, returned]
+          weights: [5, 10, 75, 6, 4]
+      - name: shipped_at
+        type: timestamp_ntz
+        nullable: true
+        description: NULL until the order ships.
+        gen: {after: placed_at, max_gap_days: 7, null_rate: 0.08}
+      - name: ship_country
+        type: string
+        gen:
+          values: [US, CA, GB, DE, FR, IN, BR, AU]
+          weights: [40, 8, 12, 10, 8, 10, 7, 5]
+      - name: discount_pct
+        type: decimal(5,2)
+        nullable: true
+        gen: {min: 5, max: 30, null_rate: 0.7}
+      - name: attributes
+        type: variant
+        nullable: true
+        description: Checkout payload. items is the cart as submitted.
+        gen:
+          null_rate: 0.02
+          shape:
+            type: object
+            fields:
+              channel: {type: string, values: [web, app, marketplace]}
+              device: {type: string, values: [ios, android, desktop], optional: 0.3}
+              coupon_code: {type: string, pattern: "SAVE##", optional: 0.8}
+              gift: {type: bool, optional: 0.7}
+              items:
+                type: array
+                min_items: 1
+                max_items: 5
+                element:
+                  type: object
+                  fields:
+                    sku: {type: string, pattern: "SKU-#####"}
+                    qty: {type: int, min: 1, max: 4}
+                    unit_price: {type: number, min: 1, max: 500, scale: 2}
+              shipping:
+                type: object
+                optional: 0.1
+                fields:
+                  method: {type: string, values: [standard, express, pickup]}
+                  cost: {type: number, min: 0, max: 40, scale: 2}
+
+  - name: order_items
+    rows: 500000
+    edge_rows: 1500
+    primary_key: order_item_id
+    columns:
+      - {name: order_item_id, type: bigint, gen: {distribution: sequence}}
+      - name: order_id
+        type: bigint
+        references: orders.order_id
+        gen: {distribution: uniform}
+      - name: product_id
+        type: bigint
+        references: products.product_id
+        gen: {distribution: zipf, exponent: 1.05}
+      - name: quantity
+        type: int
+        gen: {values: [1, 2, 3, 4, 5], weights: [60, 22, 10, 5, 3]}
+      - name: unit_price
+        type: decimal(10,2)
+        gen: {distribution: lognormal, mean: 3.4, sigma: 0.9, min: 1, max: 5000}
+      - name: discount_amount
+        type: decimal(10,2)
+        nullable: true
+        gen: {min: 0.5, max: 50, null_rate: 0.8}
+
+  - name: returns
+    rows: 15000
+    edge_rows: 150
+    primary_key: return_id
+    columns:
+      - {name: return_id, type: bigint, gen: {distribution: sequence}}
+      - name: order_item_id
+        type: bigint
+        references: order_items.order_item_id
+        gen: {distribution: uniform}
+      - {name: requested_at, type: timestamp_tz, gen: {min: 2022-01-05, max: 2025-01-31}}
+      - name: reason
+        type: string
+        gen:
+          values: [damaged, wrong_item, too_small, too_large, changed_mind, late_delivery]
+          weights: [20, 10, 15, 12, 30, 13]
+      - name: refund_amount
+        type: decimal(10,2)
+        gen: {distribution: lognormal, mean: 3.2, sigma: 0.9, min: 1, max: 5000}
+      - name: resolved_at
+        type: timestamp_tz
+        nullable: true
+        description: NULL while the return is still open.
+        gen: {after: requested_at, max_gap_days: 30, null_rate: 0.15}
