@@ -106,6 +106,10 @@ def inject_empty_groups(schema: SchemaSpec, tables: Tables, rng: random.Random) 
     for parent in schema.tables:
         children: list[tuple[str, str]] = []
         for child in schema.tables:
+            # Leaves of a hierarchy already have no children; remapping a
+            # self-reference could also create a cycle.
+            if child.name == parent.name:
+                continue
             for column in child.columns:
                 if column.references == f"{parent.name}.{parent.primary_key}":
                     children.append((child.name, column.name))

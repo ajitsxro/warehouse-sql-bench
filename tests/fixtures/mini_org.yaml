@@ -1,0 +1,29 @@
+# Small schema for hierarchies, sized for fast tests.
+name: mini_org
+description: Departments and employees with a manager hierarchy.
+tables:
+  - name: departments
+    rows: 5
+    edge_rows: 5
+    primary_key: department_id
+    columns:
+      - {name: department_id, type: int, gen: {distribution: sequence}}
+      - name: department_name
+        type: string
+        gen: {distribution: cycle, values: [Sales, Engineering, Finance, Legal, Support]}
+
+  - name: employees
+    rows: 3000
+    edge_rows: 300
+    primary_key: employee_id
+    columns:
+      - {name: employee_id, type: bigint, gen: {distribution: sequence}}
+      - name: manager_id
+        type: bigint
+        nullable: true
+        references: employees.employee_id
+      - name: department_id
+        type: int
+        references: departments.department_id
+        gen: {distribution: zipf}
+      - {name: hired_on, type: date, gen: {min: 2015-01-01, max: 2024-12-31}}

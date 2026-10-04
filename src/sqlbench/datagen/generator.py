@@ -11,8 +11,14 @@ from pydantic import BaseModel
 
 from sqlbench.datagen.edge import apply_edge_injectors
 from sqlbench.datagen.tables import Profile, TableData
-from sqlbench.datagen.values import JsonNull, derive_seed, generate_after, generate_values
-from sqlbench.schema.spec import SchemaSpec, load_schema
+from sqlbench.datagen.values import (
+    JsonNull,
+    derive_seed,
+    generate_after,
+    generate_self_references,
+    generate_values,
+)
+from sqlbench.schema.spec import ColumnSpec, SchemaSpec, TableSpec, load_schema
 from sqlbench.schema.types import LogicalType, TypeKind
 
 # Bump when the same seed would produce different data, so old manifests are
@@ -25,9 +31,9 @@ def generate_tables(schema: SchemaSpec, profile: Profile, seed: int) -> dict[str
     for table in schema.tables_in_dependency_order():
         row_count = table.rows if profile == Profile.MAIN else table.edge_rows
         values_by_column: dict[str, list[Any]] = {}
-        # Columns generated after another column wait until their anchor exists.
+        # Columns that depend on other columns of the row wait for them.
         for column in table.columns:
-            if column.gen.after is not None:
+            if column.gen.after is not None or is_self_reference(table, column):
                 continue
             column_seed = derive_seed(seed, profile, schema.name, table.name, column.name)
             parent_keys = None
@@ -43,12 +49,23 @@ def generate_tables(schema: SchemaSpec, profile: Profile, seed: int) -> dict[str
             column_seed = derive_seed(seed, profile, schema.name, table.name, column.name)
             anchors = values_by_column[column.gen.after]
             values_by_column[column.name] = generate_after(column, anchors, column_seed)
+        for column in table.columns:
+            if not is_self_reference(table, column):
+                continue
+            column_seed = derive_seed(seed, profile, schema.name, table.name, column.name)
+            assert table.primary_key is not None
+            keys = values_by_column[table.primary_key]
+            values_by_column[column.name] = generate_self_references(column, keys, column_seed)
 
         ordered = {column.name: values_by_column[column.name] for column in table.columns}
         tables[table.name] = TableData(table, ordered)
     if profile == Profile.EDGE:
         apply_edge_injectors(schema, tables, seed)
     return tables
+
+
+def is_self_reference(table: TableSpec, column: ColumnSpec) -> bool:
+    return column.references is not None and column.references.split(".")[0] == table.name
 
 
 def arrow_type(logical_type: LogicalType) -> pa.DataType:
@@ -99,6 +116,14 @@ def find_integrity_problems(schema: SchemaSpec, tables: dict[str, TableData]) ->
                 for anchor, value in zip(anchors, values, strict=True):
                     if anchor is not None and value is not None and value < anchor:
                         problems.append(f"{where}: earlier than {column.gen.after}")
+                        break
+            if is_self_reference(table, column):
+                assert table.primary_key is not None
+                own_keys = columns[table.primary_key]
+                for own_key, parent in zip(own_keys, values, strict=True):
+                    # Parents come from earlier rows; anything else could form a cycle.
+                    if parent is not None and parent >= own_key:
+                        problems.append(f"{where}: points at a later row")
                         break
         if table.primary_key is not None:
             keys = columns[table.primary_key]

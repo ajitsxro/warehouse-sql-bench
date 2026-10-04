@@ -21,6 +21,9 @@ from sqlbench.schema.types import INTEGER_KINDS, NUMERIC_KINDS, LogicalType, Typ
 
 FAKER_LOCALE = "en_US"
 DEFAULT_FAKER_POOL = 5000
+# Self-references pick a parent among the first 1/SPAN_OF_CONTROL of earlier
+# rows, which keeps an org chart a handful of levels deep.
+SPAN_OF_CONTROL = 6
 
 
 class JsonNull:
@@ -82,6 +85,21 @@ def generate_after(column: ColumnSpec, anchors: list[Any], seed: int) -> list[An
             gap = datetime.timedelta(seconds=int(seconds))
             values.append(None if anchor is None else anchor + gap)
     return apply_null_rate(values, gen.null_rate, rng)
+
+
+def generate_self_references(column: ColumnSpec, keys: list[Any], seed: int) -> list[Any]:
+    """Parent keys for a hierarchy. The first row is the root and gets NULL.
+
+    Every other row points at an earlier row, so following parents always ends
+    at a root and the hierarchy has no cycles.
+    """
+    rng = np.random.default_rng(seed)
+    draws = rng.random(len(keys))
+    parents: list[Any] = [None]
+    for index in range(1, len(keys)):
+        candidates = max(1, index // SPAN_OF_CONTROL)
+        parents.append(keys[int(draws[index] * candidates)])
+    return apply_null_rate(parents, column.gen.null_rate, rng)
 
 
 def apply_null_rate(values: list[Any], null_rate: float, rng: np.random.Generator) -> list[Any]:
