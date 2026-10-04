@@ -173,9 +173,9 @@ class ColumnSpec(StrictModel):
             if sum(choice is not None for choice in choices) != 1:
                 raise ValueError("string columns need exactly one of values, faker or pattern")
         elif kind in TEMPORAL_KINDS:
+            # Whether min and max are required depends on the table's series,
+            # so TableSpec checks that.
             check_bounds(gen, (datetime.date,), "dates or timestamps")
-            if gen.after is None and (gen.min is None or gen.max is None):
-                raise ValueError("temporal columns need min and max, or after")
             if gen.after is not None and gen.max_gap_days is None:
                 raise ValueError("after needs max_gap_days")
         elif kind != TypeKind.BOOL:
@@ -203,6 +203,31 @@ def check_numeric_gen(gen: GenSpec, kind: TypeKind) -> None:
         raise ValueError(f"{gen.distribution} needs mean and sigma")
 
 
+STEP_UNITS_IN_MINUTES = {"m": 1, "h": 60, "d": 1440}
+
+
+class SeriesSpec(StrictModel):
+    """Rows grouped by a parent key with evenly stepped times, like hourly
+    readings per device or salary history per employee.
+
+    Each key's rows step back from a last time drawn between the time column's
+    min and max. A gap skips 1 to max_gap_steps extra steps.
+    """
+
+    key: str
+    time: str
+    # Optional column holding the next row's time for the same key, NULL on the
+    # latest row: an exclusive valid_to for slowly changing history.
+    end: str | None = None
+    step: str = Field(pattern=r"^[1-9][0-9]*[mhd]$")
+    gap_rate: float = Field(default=0.0, ge=0, lt=1)
+    max_gap_steps: int = Field(default=1, ge=1)
+
+    @property
+    def step_minutes(self) -> int:
+        return int(self.step[:-1]) * STEP_UNITS_IN_MINUTES[self.step[-1]]
+
+
 class TableSpec(StrictModel):
     name: str = Field(pattern=NAME_PATTERN)
     description: str | None = None
@@ -210,6 +235,7 @@ class TableSpec(StrictModel):
     edge_rows: int = Field(ge=1)
     # Event and fact tables leave this out; the edge profile duplicates their rows.
     primary_key: str | None = None
+    series: SeriesSpec | None = None
     columns: list[ColumnSpec] = Field(min_length=1)
 
     def column(self, name: str) -> ColumnSpec:
@@ -236,6 +262,16 @@ class TableSpec(StrictModel):
             if key.nullable or key.gen.distribution != "sequence":
                 raise ValueError("primary keys must be non-nullable sequences")
 
+        if self.series is not None:
+            check_series(self, self.series)
+        for column in self.columns:
+            gen = column.gen
+            is_series_end = self.series is not None and column.name == self.series.end
+            if column.logical_type.kind not in TEMPORAL_KINDS or is_series_end:
+                continue
+            if gen.after is None and (gen.min is None or gen.max is None):
+                raise ValueError(f"{column.name}: temporal columns need min and max, or after")
+
         for column in self.columns:
             anchor_name = column.gen.after
             if anchor_name is None:
@@ -245,6 +281,26 @@ class TableSpec(StrictModel):
             if self.column(anchor_name).logical_type.kind != column.logical_type.kind:
                 raise ValueError(f"{column.name}: after must name a column of the same type")
         return self
+
+
+def check_series(table: TableSpec, series: SeriesSpec) -> None:
+    names = [column.name for column in table.columns]
+    for name in (series.key, series.time, series.end):
+        if name is not None and name not in names:
+            raise ValueError(f"series column {name} is not a column")
+    key = table.column(series.key)
+    if key.references is None or key.nullable:
+        raise ValueError("the series key must be a non-nullable foreign key")
+    time = table.column(series.time)
+    time_kind = time.logical_type.kind
+    if time_kind not in TEMPORAL_KINDS or time.nullable or time.gen.after is not None:
+        raise ValueError("the series time must be a non-nullable date or timestamp, not after")
+    if time_kind == TypeKind.DATE and not series.step.endswith("d"):
+        raise ValueError("a date series needs a step in whole days")
+    if series.end is not None:
+        end = table.column(series.end)
+        if end.logical_type.kind != time_kind or not end.nullable or end.gen != GenSpec():
+            raise ValueError("the series end must be nullable, the time's type, and have no gen")
 
 
 class SchemaSpec(StrictModel):

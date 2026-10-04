@@ -16,6 +16,7 @@ from sqlbench.datagen.values import (
     derive_seed,
     generate_after,
     generate_self_references,
+    generate_series,
     generate_values,
 )
 from sqlbench.schema.spec import ColumnSpec, SchemaSpec, TableSpec, load_schema
@@ -35,6 +36,8 @@ def generate_tables(schema: SchemaSpec, profile: Profile, seed: int) -> dict[str
         for column in table.columns:
             if column.gen.after is not None or is_self_reference(table, column):
                 continue
+            if table.series is not None and column.name in (table.series.time, table.series.end):
+                continue
             column_seed = derive_seed(seed, profile, schema.name, table.name, column.name)
             parent_keys = None
             if column.references is not None:
@@ -43,6 +46,10 @@ def generate_tables(schema: SchemaSpec, profile: Profile, seed: int) -> dict[str
             values_by_column[column.name] = generate_values(
                 column, row_count, column_seed, parent_keys
             )
+        if table.series is not None:
+            series_seed = derive_seed(seed, profile, schema.name, table.name, table.series.time)
+            keys = values_by_column[table.series.key]
+            values_by_column.update(generate_series(table, keys, series_seed))
         for column in table.columns:
             if column.gen.after is None:
                 continue
