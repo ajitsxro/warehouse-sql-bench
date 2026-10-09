@@ -1,0 +1,132 @@
+name: hr_people
+description: >
+  A company's people data: employees in departments with a reporting line,
+  their compensation history, and performance reviews. manager_id forms a
+  tree with a single CEO at the top (employee 1). compensation_history keeps
+  one row per pay period of an employee: valid_to is exclusive and equals the
+  next row's valid_from, and is NULL on the current row. Periods are about a
+  year apart, sometimes two. Compensation dates, review dates and reviewers
+  are not tied to hire and termination dates or to the reporting line.
+
+tables:
+  - name: departments
+    rows: 12
+    edge_rows: 12
+    primary_key: department_id
+    columns:
+      - {name: department_id, type: int, gen: {distribution: sequence}}
+      - name: department_name
+        type: string
+        gen:
+          distribution: cycle
+          values: [Engineering, Sales, Marketing, Finance, Legal, People, Support,
+                   Product, Design, Operations, Security, Data]
+      - name: cost_center
+        type: string
+        gen:
+          distribution: cycle
+          values: [CC-101, CC-201, CC-202, CC-301, CC-302, CC-303, CC-401,
+                   CC-102, CC-103, CC-402, CC-104, CC-105]
+      - name: location
+        type: string
+        gen: {values: [New York, London, Bangalore, Remote]}
+
+  - name: employees
+    rows: 100000
+    edge_rows: 400
+    primary_key: employee_id
+    columns:
+      - {name: employee_id, type: bigint, gen: {distribution: sequence}}
+      - name: manager_id
+        type: bigint
+        nullable: true
+        references: employees.employee_id
+      - name: department_id
+        type: int
+        references: departments.department_id
+        gen: {distribution: zipf, exponent: 1.1}
+      - {name: full_name, type: string, gen: {faker: name, cardinality: 50000}}
+      - name: job_title
+        type: string
+        gen:
+          values: [Engineer, Senior Engineer, Analyst, Account Executive, Designer,
+                   Specialist, Coordinator, Consultant, Administrator, Lead]
+      - name: employment_type
+        type: string
+        gen: {values: [full_time, part_time, contractor], weights: [80, 8, 12]}
+      - {name: hire_date, type: date, gen: {min: 2010-01-01, max: 2024-06-30}}
+      - name: termination_date
+        type: date
+        nullable: true
+        description: NULL for current employees. Can be in the future for a scheduled exit.
+        gen: {after: hire_date, max_gap_days: 1500, null_rate: 0.82}
+      - name: skills
+        type: array<string>
+        gen:
+          shape:
+            type: array
+            max_items: 4
+            element:
+              type: string
+              values: [python, sql, negotiation, excel, figma, leadership, spanish, java]
+
+  - name: compensation_history
+    rows: 450000
+    edge_rows: 2000
+    primary_key: compensation_id
+    series: {key: employee_id, time: valid_from, end: valid_to, step: 365d, gap_rate: 0.25}
+    columns:
+      - {name: compensation_id, type: bigint, gen: {distribution: sequence}}
+      - name: employee_id
+        type: bigint
+        references: employees.employee_id
+        gen: {distribution: uniform}
+      - {name: valid_from, type: date, gen: {min: 2023-01-01, max: 2024-12-31}}
+      - {name: valid_to, type: date, nullable: true}
+      - name: base_salary
+        type: decimal(12,2)
+        description: Annual base salary in the row's currency.
+        gen: {distribution: lognormal, mean: 11.3, sigma: 0.35, min: 30000, max: 600000}
+      - name: bonus_target_pct
+        type: decimal(5,2)
+        nullable: true
+        gen: {min: 5, max: 30, null_rate: 0.4}
+      - name: currency
+        type: string
+        gen: {values: [USD, GBP, INR, EUR], weights: [55, 15, 20, 10]}
+      - {name: job_level, type: int, gen: {min: 1, max: 8}}
+
+  - name: reviews
+    rows: 250000
+    edge_rows: 1500
+    primary_key: review_id
+    columns:
+      - {name: review_id, type: bigint, gen: {distribution: sequence}}
+      - name: employee_id
+        type: bigint
+        references: employees.employee_id
+        gen: {distribution: uniform}
+      - name: reviewer_id
+        type: bigint
+        references: employees.employee_id
+        gen: {distribution: zipf, exponent: 1.1}
+      - name: review_period
+        type: string
+        gen: {values: [2023-H1, 2023-H2, 2024-H1, 2024-H2]}
+      - {name: submitted_at, type: timestamp_tz, gen: {min: 2023-07-01, max: 2025-01-31}}
+      - name: rating
+        type: int
+        nullable: true
+        description: 1 to 5. NULL when the reviewer gave no overall rating.
+        gen: {values: [1, 2, 3, 4, 5], weights: [3, 10, 50, 30, 7], null_rate: 0.08}
+      - name: scores
+        type: map<string,int>
+        description: Per-competency scores; leadership only for some reviews.
+        gen:
+          shape:
+            type: object
+            fields:
+              communication: {type: int, min: 1, max: 5}
+              execution: {type: int, min: 1, max: 5}
+              collaboration: {type: int, min: 1, max: 5}
+              leadership: {type: int, min: 1, max: 5, optional: 0.6}
