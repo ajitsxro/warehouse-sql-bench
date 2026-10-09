@@ -1,0 +1,35 @@
+{
+  "schema_name": "finance_ledger",
+  "profile": "main",
+  "seed": 20261105,
+  "generator_version": 1,
+  "spec_sha256": "a5f2fc4bbe3541875fd4bd6c164194bbf942f9bd0c605684d55542ded4e65092",
+  "pyarrow_version": "26.0.0",
+  "tables": {
+    "currencies": {
+      "rows": 10,
+      "sha256": "98d8a0b6e866603c283cd4af1e93d694efa40127c085b6506737ca34b38138f9",
+      "injectors": []
+    },
+    "fx_rates": {
+      "rows": 7000,
+      "sha256": "310cd2bda8b914b0ff7fd45da08de0b5ebb722b8c659dee4c085dcdbf9d0ad58",
+      "injectors": []
+    },
+    "accounts": {
+      "rows": 400,
+      "sha256": "7fccb407139f3b8a7f479f01cb023a9b1e74826ca89766aa0f1c7f2a99ab28d0",
+      "injectors": []
+    },
+    "journal_entries": {
+      "rows": 120000,
+      "sha256": "b67336a343a775f0f670f444824d46a1fac7e64cda3fbe229013ba4cc5ef15f5",
+      "injectors": []
+    },
+    "entry_lines": {
+      "rows": 500000,
+      "sha256": "5da3e1fc8b023c3f377ef81beb2dfc61c52297d65e25c223ba40fd9fcff19900",
+      "injectors": []
+    }
+  }
+}
