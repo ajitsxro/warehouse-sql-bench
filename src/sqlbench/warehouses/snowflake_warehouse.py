@@ -1,4 +1,9 @@
-"""Snowflake adapter using key-pair auth."""
+"""Snowflake adapter using key-pair auth.
+
+Benchmark queries log in as a read-only user whose role can only SELECT from
+the benchmark database, a second safety layer behind the read-only guard.
+Loading logs in as the owner user. Both users share one key pair.
+"""
 
 import time
 from collections.abc import Callable
@@ -24,13 +29,9 @@ from sqlbench.warehouses.base import (
 from sqlbench.warehouses.guard import check_read_only
 from sqlbench.warehouses.sqlstate import category_from_sqlstate
 
-ENV_VARS = [
-    "SNOWFLAKE_ACCOUNT",
-    "SNOWFLAKE_USER",
-    "SNOWFLAKE_PRIVATE_KEY_PATH",
-    "SNOWFLAKE_WAREHOUSE",
-    "SNOWFLAKE_ROLE",
-]
+SHARED_ENV_VARS = ["SNOWFLAKE_ACCOUNT", "SNOWFLAKE_PRIVATE_KEY_PATH", "SNOWFLAKE_WAREHOUSE"]
+OWNER_ENV_VARS = ["SNOWFLAKE_USER", "SNOWFLAKE_ROLE"]
+READER_ENV_VARS = ["SNOWFLAKE_READER_USER", "SNOWFLAKE_READER_ROLE"]
 QUERY_TAG = "sqlbench"
 LOGIN_TIMEOUT_S = 30
 # 604: "SQL execution canceled", 630: "Statement reached its statement or
@@ -45,13 +46,26 @@ def categorize_snowflake_error(error: SnowflakeError) -> ErrorCategory:
 
 
 def connect_from_env(context: SessionContext) -> SnowflakeConnection:
-    env = require_env(ENV_VARS)
+    """Connect as the read-only user, for benchmark queries."""
+    env = require_env(SHARED_ENV_VARS + READER_ENV_VARS)
+    return connect(env, env["SNOWFLAKE_READER_USER"], env["SNOWFLAKE_READER_ROLE"], context)
+
+
+def connect_owner_from_env(context: SessionContext) -> SnowflakeConnection:
+    """Connect as the user that owns the benchmark database, for loading."""
+    env = require_env(SHARED_ENV_VARS + OWNER_ENV_VARS)
+    return connect(env, env["SNOWFLAKE_USER"], env["SNOWFLAKE_ROLE"], context)
+
+
+def connect(
+    env: dict[str, str], user: str, role: str, context: SessionContext
+) -> SnowflakeConnection:
     return snowflake.connector.connect(
         account=env["SNOWFLAKE_ACCOUNT"],
-        user=env["SNOWFLAKE_USER"],
+        user=user,
         private_key_file=env["SNOWFLAKE_PRIVATE_KEY_PATH"],
         warehouse=env["SNOWFLAKE_WAREHOUSE"],
-        role=env["SNOWFLAKE_ROLE"],
+        role=role,
         database=context.database,
         schema=context.schema,
         session_parameters={"QUERY_TAG": QUERY_TAG, "TIMEZONE": SESSION_TIME_ZONE},
