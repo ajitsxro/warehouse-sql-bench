@@ -12,9 +12,12 @@ from snowflake.connector import SnowflakeConnection
 from snowflake.connector.errors import ProgrammingError
 
 from sqlbench.settings import MissingEnvError
-from sqlbench.warehouses.base import Column, ErrorCategory
-from sqlbench.warehouses.databricks_warehouse import DatabricksWarehouse, connect_from_env
+from sqlbench.warehouses import databricks_warehouse, snowflake_warehouse
+from sqlbench.warehouses.base import Column, ErrorCategory, SessionContext
+from sqlbench.warehouses.databricks_warehouse import DatabricksWarehouse
 from sqlbench.warehouses.snowflake_warehouse import SnowflakeWarehouse
+
+CONTEXT = SessionContext("sqlbench", "ecommerce__edge")
 
 
 class FakeCursor:
@@ -73,12 +76,13 @@ class SnowflakeMeta:
 def make_snowflake(cursor: FakeCursor) -> tuple[SnowflakeWarehouse, list[FakeConnection]]:
     opened: list[FakeConnection] = []
 
-    def connect() -> SnowflakeConnection:
+    def connect(context: SessionContext) -> SnowflakeConnection:
+        assert context == CONTEXT
         connection = FakeConnection(cursor)
         opened.append(connection)
         return cast(SnowflakeConnection, connection)
 
-    return SnowflakeWarehouse(connect), opened
+    return SnowflakeWarehouse(CONTEXT, connect), opened
 
 
 def test_snowflake_sets_timeout_once_and_maps_type_codes() -> None:
@@ -159,10 +163,11 @@ class HangingDatabricksCursor(FakeCursor):
 
 
 def make_databricks(cursor: FakeCursor) -> DatabricksWarehouse:
-    def connect() -> DatabricksConnection:
+    def connect(context: SessionContext) -> DatabricksConnection:
+        assert context == CONTEXT
         return cast(DatabricksConnection, FakeConnection(cursor))
 
-    return DatabricksWarehouse(connect)
+    return DatabricksWarehouse(CONTEXT, connect)
 
 
 def test_databricks_returns_rows_and_sets_server_timeout_with_margin() -> None:
@@ -215,18 +220,42 @@ def test_missing_credentials_raise_before_any_network_call(
         DatabricksWarehouse().execute("SELECT 1", timeout_s=30)
 
 
-def test_databricks_connect_caps_retries(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_databricks_connect_sets_context_utc_and_caps_retries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv("DATABRICKS_SERVER_HOSTNAME", "example.cloud.databricks.com")
     monkeypatch.setenv("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/abc")
     monkeypatch.setenv("DATABRICKS_TOKEN", "not-a-real-token")
+    captured: dict[str, Any] = {}
+    cursor = FakeCursor([], pa.table({}))
+
+    def fake_connect(**kwargs: Any) -> FakeConnection:
+        captured.update(kwargs)
+        return FakeConnection(cursor)
+
+    monkeypatch.setattr("databricks.sql.connect", fake_connect)
+
+    databricks_warehouse.connect_from_env(CONTEXT)
+
+    assert captured["catalog"] == "sqlbench"
+    assert captured["schema"] == "ecommerce__edge"
+    assert cursor.executed == ["SET TIME ZONE 'UTC'"]
+    assert captured["_retry_stop_after_attempts_count"] == 3
+    assert captured["_retry_stop_after_attempts_duration"] == 30
+
+
+def test_snowflake_connect_sets_context_and_utc(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in snowflake_warehouse.ENV_VARS:
+        monkeypatch.setenv(name, "x")
     captured: dict[str, Any] = {}
 
     def fake_connect(**kwargs: Any) -> None:
         captured.update(kwargs)
 
-    monkeypatch.setattr("databricks.sql.connect", fake_connect)
+    monkeypatch.setattr("snowflake.connector.connect", fake_connect)
 
-    connect_from_env()
+    snowflake_warehouse.connect_from_env(CONTEXT)
 
-    assert captured["_retry_stop_after_attempts_count"] == 3
-    assert captured["_retry_stop_after_attempts_duration"] == 30
+    assert captured["database"] == "sqlbench"
+    assert captured["schema"] == "ecommerce__edge"
+    assert captured["session_parameters"] == {"QUERY_TAG": "sqlbench", "TIMEZONE": "UTC"}

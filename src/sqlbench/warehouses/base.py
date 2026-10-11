@@ -34,6 +34,19 @@ class ErrorCategory(StrEnum):
 
 
 @dataclass(frozen=True)
+class SessionContext:
+    """Where unqualified table names resolve. Databricks calls the database a catalog."""
+
+    database: str | None = None
+    schema: str | None = None
+
+
+# Both warehouses run every session in UTC, so timestamps without a time zone
+# and conversions to local time behave the same way on each.
+SESSION_TIME_ZONE = "UTC"
+
+
+@dataclass(frozen=True)
 class QueryError:
     category: ErrorCategory
     message: str

@@ -12,10 +12,12 @@ from snowflake.connector.errors import Error as SnowflakeError
 
 from sqlbench.settings import require_env
 from sqlbench.warehouses.base import (
+    SESSION_TIME_ZONE,
     Column,
     ErrorCategory,
     QueryError,
     QueryResult,
+    SessionContext,
     WarehouseName,
     rows_from_arrow,
 )
@@ -42,7 +44,7 @@ def categorize_snowflake_error(error: SnowflakeError) -> ErrorCategory:
     return category_from_sqlstate(error.sqlstate)
 
 
-def connect_from_env() -> SnowflakeConnection:
+def connect_from_env(context: SessionContext) -> SnowflakeConnection:
     env = require_env(ENV_VARS)
     return snowflake.connector.connect(
         account=env["SNOWFLAKE_ACCOUNT"],
@@ -50,7 +52,9 @@ def connect_from_env() -> SnowflakeConnection:
         private_key_file=env["SNOWFLAKE_PRIVATE_KEY_PATH"],
         warehouse=env["SNOWFLAKE_WAREHOUSE"],
         role=env["SNOWFLAKE_ROLE"],
-        session_parameters={"QUERY_TAG": QUERY_TAG},
+        database=context.database,
+        schema=context.schema,
+        session_parameters={"QUERY_TAG": QUERY_TAG, "TIMEZONE": SESSION_TIME_ZONE},
         login_timeout=LOGIN_TIMEOUT_S,
     )
 
@@ -60,7 +64,12 @@ class SnowflakeWarehouse:
 
     name = WarehouseName.SNOWFLAKE
 
-    def __init__(self, connect: Callable[[], SnowflakeConnection] = connect_from_env) -> None:
+    def __init__(
+        self,
+        context: SessionContext | None = None,
+        connect: Callable[[SessionContext], SnowflakeConnection] = connect_from_env,
+    ) -> None:
+        self._context = context or SessionContext()
         self._connect = connect
         self._connection: SnowflakeConnection | None = None
         self._session_timeout_s: int | None = None
@@ -73,7 +82,7 @@ class SnowflakeWarehouse:
         start = time.perf_counter()
         try:
             if self._connection is None:
-                self._connection = self._connect()
+                self._connection = self._connect(self._context)
             with self._connection.cursor() as cursor:
                 # The timeout is enforced server-side; only resend it when it changes.
                 if self._session_timeout_s != timeout_s:

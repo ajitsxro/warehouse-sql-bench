@@ -5,7 +5,7 @@ from decimal import Decimal
 import duckdb
 import pytest
 
-from sqlbench.warehouses.base import Column, ErrorCategory
+from sqlbench.warehouses.base import Column, ErrorCategory, SessionContext
 from sqlbench.warehouses.duckdb_warehouse import DuckDBWarehouse
 
 
@@ -97,3 +97,23 @@ def test_guard_blocks_writes_before_they_reach_duckdb(warehouse: DuckDBWarehouse
     assert result.error.category == ErrorCategory.BLOCKED
     still_there = warehouse.execute("SELECT count(*) FROM orders", timeout_s=10)
     assert still_there.rows == [(2,)]
+
+
+def test_context_makes_unqualified_names_resolve_in_that_schema() -> None:
+    connection = duckdb.connect()
+    connection.execute("ATTACH ':memory:' AS sqlbench")
+    for schema in ("shop", "shop__edge"):
+        connection.execute(f"CREATE SCHEMA sqlbench.{schema}")
+    connection.execute("CREATE TABLE sqlbench.shop.orders AS SELECT 1 AS id")
+    connection.execute("CREATE TABLE sqlbench.shop__edge.orders AS SELECT 2 AS id")
+
+    edge = DuckDBWarehouse(connection, SessionContext("sqlbench", "shop__edge"))
+
+    assert edge.execute("SELECT id FROM orders", timeout_s=10).rows == [(2,)]
+
+
+def test_sessions_run_in_utc(warehouse: DuckDBWarehouse) -> None:
+    result = warehouse.execute("SELECT TIMESTAMPTZ '2024-03-10 07:00:00+00' AS t", timeout_s=10)
+
+    assert result.rows[0][0].utcoffset() == datetime.timedelta(0)
+    assert str(result.rows[0][0].tzinfo) == "UTC"
