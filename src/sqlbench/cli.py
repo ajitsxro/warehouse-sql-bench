@@ -1,5 +1,6 @@
 """Command-line entry point for the benchmark."""
 
+from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
 
@@ -9,6 +10,9 @@ from dotenv import load_dotenv
 
 from sqlbench.datagen.generator import generate_dataset
 from sqlbench.datagen.tables import Profile
+from sqlbench.load.cost import load_cost_estimate
+from sqlbench.load.dataset import Loader, LoadError, load_dataset
+from sqlbench.load.duckdb_loader import DuckDBLoader
 from sqlbench.schema.spec import load_schema
 from sqlbench.settings import MissingEnvError
 from sqlbench.warehouses.base import Warehouse, WarehouseName
@@ -21,11 +25,12 @@ SCHEMAS_DIR = Path("schemas")
 DATA_DIR = Path("data")
 MANIFESTS_DIR = Path("manifests")
 DEFAULT_SEED = 20261105
+DUCKDB_FILE_NAME = "sqlbench.duckdb"
 
 app = typer.Typer(name="bench", no_args_is_help=True)
 schema_app = typer.Typer(no_args_is_help=True, help="Check schema specs.")
 app.add_typer(schema_app, name="schema")
-data_app = typer.Typer(no_args_is_help=True, help="Generate benchmark data.")
+data_app = typer.Typer(no_args_is_help=True, help="Generate and load benchmark data.")
 app.add_typer(data_app, name="data")
 
 
@@ -65,10 +70,35 @@ def ping(
     typer.echo(f"{warehouse}: ok, SELECT 1 took {result.elapsed_ms:.0f} ms")
 
 
+class LoadProfile(StrEnum):
+    MAIN = "main"
+    EDGE = "edge"
+    BOTH = "both"
+
+
 def schema_paths(schemas_dir: Path, name: str | None) -> list[Path]:
     if name is not None:
         return [schemas_dir / f"{name}.yaml"]
     return sorted(schemas_dir.glob("*.yaml"))
+
+
+def chosen_schema_paths(schemas_dir: Path, name: str | None, all_schemas: bool) -> list[Path]:
+    if (name is None) == (not all_schemas):
+        typer.echo("pass exactly one of --schema NAME or --all", err=True)
+        raise typer.Exit(code=2)
+    return schema_paths(schemas_dir, name)
+
+
+def chosen_profiles(profile: LoadProfile) -> list[Profile]:
+    if profile == LoadProfile.BOTH:
+        return [Profile.MAIN, Profile.EDGE]
+    return [Profile(profile.value)]
+
+
+def open_loader(warehouse: WarehouseName, data_dir: Path) -> Loader:
+    if warehouse == WarehouseName.DUCKDB:
+        return DuckDBLoader(data_dir / DUCKDB_FILE_NAME)
+    raise typer.BadParameter(f"no loader for {warehouse} yet")
 
 
 @schema_app.command("validate")
@@ -116,11 +146,44 @@ def generate_data(
     manifest_dir: Annotated[Path, typer.Option()] = MANIFESTS_DIR,
 ) -> None:
     """Write Parquet files under data/ and a manifest under manifests/."""
-    if (schema is None) == (not all_schemas):
-        typer.echo("pass exactly one of --schema NAME or --all", err=True)
-        raise typer.Exit(code=2)
-
-    for path in schema_paths(schemas_dir, schema):
+    for path in chosen_schema_paths(schemas_dir, schema, all_schemas):
         manifest = generate_dataset(path, profile, seed, data_dir, manifest_dir)
         total_rows = sum(table.rows for table in manifest.tables.values())
         typer.echo(f"{manifest.schema_name} ({profile}): {total_rows:,} rows written")
+
+
+@data_app.command("load")
+def load_data(
+    warehouse: Annotated[WarehouseName, typer.Option("--warehouse", "-w")],
+    profile: Annotated[LoadProfile, typer.Option()] = LoadProfile.BOTH,
+    schema: Annotated[str | None, typer.Option(help="Schema to load.")] = None,
+    all_schemas: Annotated[bool, typer.Option("--all", help="Load every schema.")] = False,
+    yes: Annotated[bool, typer.Option("--yes", help="Skip the cost confirmation.")] = False,
+    schemas_dir: Annotated[Path, typer.Option("--dir")] = SCHEMAS_DIR,
+    data_dir: Annotated[Path, typer.Option()] = DATA_DIR,
+    manifest_dir: Annotated[Path, typer.Option()] = MANIFESTS_DIR,
+) -> None:
+    """Replace the warehouse copy of each dataset with the generated files. Safe to rerun."""
+    paths = chosen_schema_paths(schemas_dir, schema, all_schemas)
+    profiles = chosen_profiles(profile)
+    if warehouse != WarehouseName.DUCKDB:
+        table_count = len(profiles) * sum(len(load_schema(path).tables) for path in paths)
+        typer.echo(f"Estimated cost: {load_cost_estimate(warehouse, table_count)}")
+        if not yes and not typer.confirm("Load now?"):
+            raise typer.Exit(code=1)
+
+    try:
+        loader = open_loader(warehouse, data_dir)
+    except MissingEnvError as error:
+        typer.echo(f"{warehouse}: {error}", err=True)
+        raise typer.Exit(code=1) from error
+    try:
+        for path in paths:
+            for each_profile in profiles:
+                load_dataset(loader, path, each_profile, data_dir, manifest_dir)
+                typer.echo(f"{path.stem} ({each_profile}): loaded into {warehouse}")
+    except LoadError as error:
+        typer.echo(f"{warehouse}: {error}", err=True)
+        raise typer.Exit(code=1) from error
+    finally:
+        loader.close()
