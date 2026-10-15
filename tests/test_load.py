@@ -151,3 +151,17 @@ def test_cli_loads_duckdb_without_asking(generated: Path) -> None:
     assert "mini_shop (main): loaded into duckdb" in result.output
     assert "mini_shop (edge): loaded into duckdb" in result.output
     assert "Estimated cost" not in result.output
+
+
+def test_cli_prints_a_cost_estimate_and_stops_when_declined(generated: Path) -> None:
+    result = CliRunner().invoke(
+        app,
+        ["data", "load", "--warehouse", "snowflake", "--schema", "mini_shop"]
+        + ["--dir", str(FIXTURE.parent), "--data-dir", str(generated / "data")],
+        input="n\n",
+    )
+
+    assert result.exit_code == 1
+    assert "Estimated cost: 6 tables" in result.output
+    assert "credits" in result.output
+    assert "loaded into" not in result.output
