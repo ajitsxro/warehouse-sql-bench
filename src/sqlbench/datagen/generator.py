@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -20,7 +21,7 @@ from sqlbench.datagen.values import (
     generate_values,
 )
 from sqlbench.schema.spec import ColumnSpec, SchemaSpec, TableSpec, load_schema
-from sqlbench.schema.types import LogicalType, TypeKind
+from sqlbench.schema.types import NUMERIC_KINDS, TEMPORAL_KINDS, LogicalType, TypeKind
 
 # Bump when the same seed would produce different data, so old manifests are
 # recognizably stale.
@@ -168,10 +169,40 @@ def to_arrow_table(table: TableData) -> pa.Table:
     return pa.Table.from_arrays(arrays, schema=pa.schema(fields))
 
 
+class ColumnStats(BaseModel):
+    """Aggregates of one column, recomputed in the warehouse after loading."""
+
+    nulls: int
+    # Sum of a numeric column: exact text for integers and decimals, repr for doubles.
+    total: str | None = None
+    # Distinct non-null values, for primary and foreign key columns.
+    distinct: int | None = None
+    # Earliest and latest value of a date or timestamp column, ISO 8601.
+    min: str | None = None
+    max: str | None = None
+
+
+def column_stats(table: TableSpec, column: ColumnSpec, values: list[Any]) -> ColumnStats:
+    present = [value for value in values if value is not None]
+    stats = ColumnStats(nulls=len(values) - len(present))
+    kind = column.logical_type.kind
+    if kind == TypeKind.DOUBLE:
+        stats.total = repr(math.fsum(present))
+    elif kind in NUMERIC_KINDS:
+        stats.total = str(sum(present))
+    if column.name == table.primary_key or column.references is not None:
+        stats.distinct = len(set(present))
+    if kind in TEMPORAL_KINDS and present:
+        stats.min = min(present).isoformat()
+        stats.max = max(present).isoformat()
+    return stats
+
+
 class TableManifest(BaseModel):
     rows: int
     sha256: str
     injectors: list[str]
+    columns: dict[str, ColumnStats]
 
 
 class Manifest(BaseModel):
@@ -213,8 +244,14 @@ def generate_dataset(
         data = tables[table.name]
         path = output_dir / f"{table.name}.parquet"
         pq.write_table(to_arrow_table(data), path, compression="zstd")
+        stats = {}
+        for column in table.columns:
+            stats[column.name] = column_stats(table, column, data.columns[column.name])
         table_manifests[table.name] = TableManifest(
-            rows=data.row_count, sha256=file_sha256(path), injectors=data.injectors
+            rows=data.row_count,
+            sha256=file_sha256(path),
+            injectors=data.injectors,
+            columns=stats,
         )
 
     manifest = Manifest(

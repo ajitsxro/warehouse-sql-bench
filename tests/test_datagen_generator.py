@@ -1,4 +1,6 @@
+import datetime
 import json
+from decimal import Decimal
 from pathlib import Path
 
 import pyarrow.parquet as pq
@@ -9,6 +11,7 @@ from sqlbench.cli import app
 from sqlbench.datagen.generator import (
     Manifest,
     arrow_type,
+    column_stats,
     find_integrity_problems,
     generate_dataset,
     generate_tables,
@@ -101,3 +104,19 @@ def test_cli_needs_exactly_one_of_schema_or_all() -> None:
 
     assert neither.exit_code == 2
     assert both.exit_code == 2
+
+
+def test_column_stats_by_column_kind() -> None:
+    orders = SCHEMA.table("orders")
+
+    total = column_stats(orders, orders.column("total"), [Decimal("1.50"), None, Decimal("2.25")])
+    key = column_stats(orders, orders.column("customer_id"), [3, 3, None, 4])
+    placed = column_stats(
+        orders,
+        orders.column("placed_at"),
+        [datetime.datetime(2024, 2, 29, 12), datetime.datetime(2023, 1, 1)],
+    )
+
+    assert (total.nulls, total.total, total.distinct) == (1, "3.75", None)
+    assert (key.nulls, key.distinct) == (1, 2)
+    assert (placed.min, placed.max) == ("2023-01-01T00:00:00", "2024-02-29T12:00:00")

@@ -12,14 +12,67 @@
       "injectors": [
         "empty_groups",
         "messy_strings"
-      ]
+      ],
+      "columns": {
+        "currency_id": {
+          "nulls": 0,
+          "total": "55",
+          "distinct": 10,
+          "min": null,
+          "max": null
+        },
+        "currency_code": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "minor_units": {
+          "nulls": 0,
+          "total": "18",
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "fx_rates": {
       "rows": 526,
       "sha256": "f5d88f1b4d242ac14c6108381f51aca2dd1daf1bc5004523e995f27ad08bb809",
       "injectors": [
         "ties"
-      ]
+      ],
+      "columns": {
+        "fx_rate_id": {
+          "nulls": 0,
+          "total": "155695",
+          "distinct": 526,
+          "min": null,
+          "max": null
+        },
+        "currency_id": {
+          "nulls": 0,
+          "total": "2841",
+          "distinct": 9,
+          "min": null,
+          "max": null
+        },
+        "rate_date": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2024-10-11",
+          "max": "2024-12-31"
+        },
+        "rate_to_usd": {
+          "nulls": 0,
+          "total": "411.54089049",
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "accounts": {
       "rows": 150,
@@ -29,7 +82,51 @@
         "nulls",
         "boundary_dates",
         "messy_strings"
-      ]
+      ],
+      "columns": {
+        "account_id": {
+          "nulls": 0,
+          "total": "11325",
+          "distinct": 150,
+          "min": null,
+          "max": null
+        },
+        "parent_account_id": {
+          "nulls": 7,
+          "total": "907",
+          "distinct": 19,
+          "min": null,
+          "max": null
+        },
+        "account_code": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "account_type": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "is_active": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "opened_on": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2018-01-22",
+          "max": "2024-12-31"
+        }
+      }
     },
     "journal_entries": {
       "rows": 800,
@@ -40,7 +137,58 @@
         "boundary_dates",
         "semi_structured",
         "messy_strings"
-      ]
+      ],
+      "columns": {
+        "entry_id": {
+          "nulls": 0,
+          "total": "320400",
+          "distinct": 800,
+          "min": null,
+          "max": null
+        },
+        "entry_date": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2023-01-01",
+          "max": "2024-12-31"
+        },
+        "posted_on": {
+          "nulls": 40,
+          "total": null,
+          "distinct": null,
+          "min": "2023-01-08",
+          "max": "2025-01-14"
+        },
+        "currency_id": {
+          "nulls": 0,
+          "total": "4585",
+          "distinct": 9,
+          "min": null,
+          "max": null
+        },
+        "source": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "created_by": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "attributes": {
+          "nulls": 89,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "entry_lines": {
       "rows": 2000,
@@ -49,7 +197,44 @@
         "nulls",
         "messy_strings",
         "ties"
-      ]
+      ],
+      "columns": {
+        "line_id": {
+          "nulls": 0,
+          "total": "2001000",
+          "distinct": 2000,
+          "min": null,
+          "max": null
+        },
+        "entry_id": {
+          "nulls": 0,
+          "total": "837745",
+          "distinct": 708,
+          "min": null,
+          "max": null
+        },
+        "account_id": {
+          "nulls": 0,
+          "total": "133214",
+          "distinct": 139,
+          "min": null,
+          "max": null
+        },
+        "amount": {
+          "nulls": 0,
+          "total": "85388.05",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "cost_center": {
+          "nulls": 819,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     }
   }
 }

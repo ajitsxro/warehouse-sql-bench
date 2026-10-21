@@ -9,22 +9,198 @@
     "visitors": {
       "rows": 60000,
       "sha256": "4ea3fa8235090cbe0c5d2648bd51ba30f1144e186dfaae835ad15934ac4f391c",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "visitor_id": {
+          "nulls": 0,
+          "total": "1800030000",
+          "distinct": 60000,
+          "min": null,
+          "max": null
+        },
+        "first_seen_at": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2023-01-01T00:20:55",
+          "max": "2024-12-30T23:58:14"
+        },
+        "country": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "device_type": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "browser": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "user_id": {
+          "nulls": 41827,
+          "total": "9961576690",
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "sessions": {
       "rows": 150000,
       "sha256": "b65721ed2f3bc7c0816b925df2e38c8c75d3e74d2300d813b4094260f036c698",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "session_id": {
+          "nulls": 0,
+          "total": "11250075000",
+          "distinct": 150000,
+          "min": null,
+          "max": null
+        },
+        "visitor_id": {
+          "nulls": 0,
+          "total": "3775821039",
+          "distinct": 13258,
+          "min": null,
+          "max": null
+        },
+        "started_at": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2023-01-01T00:41:06",
+          "max": "2024-12-30T23:56:28"
+        },
+        "ended_at": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2023-01-01T01:38:51",
+          "max": "2024-12-31T01:37:42"
+        },
+        "landing_page": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "utm": {
+          "nulls": 52687,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "tags": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "is_bounce": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "pageviews": {
       "rows": 500000,
       "sha256": "a6a5fdd7ac439ac678290f685a01c5abfa8e4eaa5bd84141ac53d71f38a9f1d4",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "session_id": {
+          "nulls": 0,
+          "total": "37469632948",
+          "distinct": 144637,
+          "min": null,
+          "max": null
+        },
+        "viewed_at": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2023-01-01T00:01:42",
+          "max": "2024-12-30T23:58:27"
+        },
+        "page_path": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "referrer": {
+          "nulls": 200277,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "load_time_ms": {
+          "nulls": 0,
+          "total": "398208911",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "scroll_depth_pct": {
+          "nulls": 49734,
+          "total": "22490357",
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "events": {
       "rows": 300000,
       "sha256": "12044ec8fc56ed50bbca321668a2973df29b462b37d16bb73e365957657e929e",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "session_id": {
+          "nulls": 0,
+          "total": "25045536456",
+          "distinct": 47530,
+          "min": null,
+          "max": null
+        },
+        "event_ts": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2023-01-01T00:05:51+00:00",
+          "max": "2024-12-30T23:59:45+00:00"
+        },
+        "event_name": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "properties": {
+          "nulls": 14844,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     }
   }
 }

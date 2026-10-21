@@ -9,27 +9,212 @@
     "currencies": {
       "rows": 10,
       "sha256": "98d8a0b6e866603c283cd4af1e93d694efa40127c085b6506737ca34b38138f9",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "currency_id": {
+          "nulls": 0,
+          "total": "55",
+          "distinct": 10,
+          "min": null,
+          "max": null
+        },
+        "currency_code": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "minor_units": {
+          "nulls": 0,
+          "total": "18",
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "fx_rates": {
       "rows": 7000,
       "sha256": "310cd2bda8b914b0ff7fd45da08de0b5ebb722b8c659dee4c085dcdbf9d0ad58",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "fx_rate_id": {
+          "nulls": 0,
+          "total": "24503500",
+          "distinct": 7000,
+          "min": null,
+          "max": null
+        },
+        "currency_id": {
+          "nulls": 0,
+          "total": "38752",
+          "distinct": 10,
+          "min": null,
+          "max": null
+        },
+        "rate_date": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2022-07-05",
+          "max": "2024-12-31"
+        },
+        "rate_to_usd": {
+          "nulls": 0,
+          "total": "5240.44387174",
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "accounts": {
       "rows": 400,
       "sha256": "7fccb407139f3b8a7f479f01cb023a9b1e74826ca89766aa0f1c7f2a99ab28d0",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "account_id": {
+          "nulls": 0,
+          "total": "80200",
+          "distinct": 400,
+          "min": null,
+          "max": null
+        },
+        "parent_account_id": {
+          "nulls": 1,
+          "total": "6578",
+          "distinct": 55,
+          "min": null,
+          "max": null
+        },
+        "account_code": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "account_type": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "is_active": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "opened_on": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2018-01-06",
+          "max": "2024-06-29"
+        }
+      }
     },
     "journal_entries": {
       "rows": 120000,
       "sha256": "b67336a343a775f0f670f444824d46a1fac7e64cda3fbe229013ba4cc5ef15f5",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "entry_id": {
+          "nulls": 0,
+          "total": "7200060000",
+          "distinct": 120000,
+          "min": null,
+          "max": null
+        },
+        "entry_date": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2023-01-01",
+          "max": "2024-12-31"
+        },
+        "posted_on": {
+          "nulls": 4821,
+          "total": null,
+          "distinct": null,
+          "min": "2023-01-01",
+          "max": "2025-01-15"
+        },
+        "currency_id": {
+          "nulls": 0,
+          "total": "643894",
+          "distinct": 10,
+          "min": null,
+          "max": null
+        },
+        "source": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "created_by": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "attributes": {
+          "nulls": 12110,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "entry_lines": {
       "rows": 500000,
       "sha256": "5da3e1fc8b023c3f377ef81beb2dfc61c52297d65e25c223ba40fd9fcff19900",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "line_id": {
+          "nulls": 0,
+          "total": "125000250000",
+          "distinct": 500000,
+          "min": null,
+          "max": null
+        },
+        "entry_id": {
+          "nulls": 0,
+          "total": "29987312955",
+          "distinct": 118101,
+          "min": null,
+          "max": null
+        },
+        "account_id": {
+          "nulls": 0,
+          "total": "113701110",
+          "distinct": 400,
+          "min": null,
+          "max": null
+        },
+        "amount": {
+          "nulls": 0,
+          "total": "-1278401.25",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "cost_center": {
+          "nulls": 199962,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     }
   }
 }

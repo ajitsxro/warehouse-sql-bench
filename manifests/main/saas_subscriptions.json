@@ -9,27 +9,268 @@
     "plans": {
       "rows": 12,
       "sha256": "22016837b881ffe752d2763ef39de30670380aac876fe35fe5f17aaac8e031f6",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "plan_id": {
+          "nulls": 0,
+          "total": "78",
+          "distinct": 12,
+          "min": null,
+          "max": null
+        },
+        "plan_name": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "billing_period": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "tier_rank": {
+          "nulls": 0,
+          "total": "42",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "list_price": {
+          "nulls": 0,
+          "total": "3102",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "included_features": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "accounts": {
       "rows": 8000,
       "sha256": "363ff0b64458a652e63832c3b67887bd20e7315c643fe2e6255200b27dc38f2c",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "account_id": {
+          "nulls": 0,
+          "total": "32004000",
+          "distinct": 8000,
+          "min": null,
+          "max": null
+        },
+        "company_name": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "industry": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "country": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "employee_band": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "created_at": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2020-01-01T06:25:11+00:00",
+          "max": "2024-06-29T20:19:01+00:00"
+        },
+        "account_owner": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "subscriptions": {
       "rows": 20000,
       "sha256": "210930ca3826aa237934e642ab154af93f8f4e3c40a3d4a25ed371afaf3cf7dd",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "subscription_id": {
+          "nulls": 0,
+          "total": "200010000",
+          "distinct": 20000,
+          "min": null,
+          "max": null
+        },
+        "account_id": {
+          "nulls": 0,
+          "total": "79970930",
+          "distinct": 3526,
+          "min": null,
+          "max": null
+        },
+        "plan_id": {
+          "nulls": 0,
+          "total": "124135",
+          "distinct": 12,
+          "min": null,
+          "max": null
+        },
+        "started_at": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2020-01-01T01:07:07+00:00",
+          "max": "2024-12-30T20:08:54+00:00"
+        },
+        "ended_at": {
+          "nulls": 9009,
+          "total": null,
+          "distinct": null,
+          "min": "2020-01-11T18:16:29+00:00",
+          "max": "2027-06-02T04:29:16+00:00"
+        },
+        "seats": {
+          "nulls": 0,
+          "total": "241231",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "discount_pct": {
+          "nulls": 14958,
+          "total": "114231.21",
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "invoices": {
       "rows": 120000,
       "sha256": "db22dbfca5b0d2c00379367d940bf31900f4d466cbf34991afc4d71671f68169",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "invoice_id": {
+          "nulls": 0,
+          "total": "7200060000",
+          "distinct": 120000,
+          "min": null,
+          "max": null
+        },
+        "subscription_id": {
+          "nulls": 0,
+          "total": "1204195488",
+          "distinct": 19937,
+          "min": null,
+          "max": null
+        },
+        "issued_at": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2020-01-01T00:45:09+00:00",
+          "max": "2024-12-30T23:45:50+00:00"
+        },
+        "due_at": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2020-01-02T15:11:43+00:00",
+          "max": "2025-01-29T16:21:41+00:00"
+        },
+        "paid_at": {
+          "nulls": 14522,
+          "total": null,
+          "distinct": null,
+          "min": "2020-01-03T07:34:11+00:00",
+          "max": "2025-02-26T12:22:05+00:00"
+        },
+        "amount": {
+          "nulls": 0,
+          "total": "99057686.79",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "tax_amount": {
+          "nulls": 36085,
+          "total": "4581872.85",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "currency": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "usage_events": {
       "rows": 500000,
       "sha256": "eecfd2ba61fab41fe1670ad4c75813104742467de3ed23fd6e5767195f695163",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "account_id": {
+          "nulls": 0,
+          "total": "2376349427",
+          "distinct": 7976,
+          "min": null,
+          "max": null
+        },
+        "event_ts": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2023-01-01T00:08:13+00:00",
+          "max": "2024-12-30T23:55:37+00:00"
+        },
+        "event_type": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "quantity": {
+          "nulls": 0,
+          "total": "2837489",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "payload": {
+          "nulls": 14996,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     }
   }
 }

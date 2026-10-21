@@ -9,27 +9,310 @@
     "customers": {
       "rows": 50000,
       "sha256": "4c756691c8f2805769dd3e2c87e6b536a915b703e38c6feba6facda6cca75061",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "customer_id": {
+          "nulls": 0,
+          "total": "1250025000",
+          "distinct": 50000,
+          "min": null,
+          "max": null
+        },
+        "email": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "full_name": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "country": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "city": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "segment": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "signup_date": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2021-01-01",
+          "max": "2024-12-31"
+        },
+        "marketing_opt_in": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "loyalty_tier": {
+          "nulls": 19856,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "products": {
       "rows": 5000,
       "sha256": "7a94559c0d307c6d8ba0b9b5d7dd9866a15621f27d9423d23404dc5ca725455b",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "product_id": {
+          "nulls": 0,
+          "total": "12502500",
+          "distinct": 5000,
+          "min": null,
+          "max": null
+        },
+        "sku": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "product_name": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "category": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "brand": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "list_price": {
+          "nulls": 0,
+          "total": "222829.21",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "launched_on": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2018-01-02",
+          "max": "2024-11-30"
+        },
+        "is_active": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "tags": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "specs": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "orders": {
       "rows": 200000,
       "sha256": "74087020620521f63dc8064c1f792a4253ddd31ed4645ee4e74e9eb2ef441553",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "order_id": {
+          "nulls": 0,
+          "total": "20000100000",
+          "distinct": 200000,
+          "min": null,
+          "max": null
+        },
+        "customer_id": {
+          "nulls": 0,
+          "total": "4671004981",
+          "distinct": 21679,
+          "min": null,
+          "max": null
+        },
+        "placed_at": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2022-01-01T00:07:00",
+          "max": "2024-12-30T23:44:59"
+        },
+        "status": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "shipped_at": {
+          "nulls": 15917,
+          "total": null,
+          "distinct": null,
+          "min": "2022-01-01T06:01:28",
+          "max": "2025-01-06T16:43:55"
+        },
+        "ship_country": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "discount_pct": {
+          "nulls": 140320,
+          "total": "1044544.57",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "attributes": {
+          "nulls": 3991,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "order_items": {
       "rows": 500000,
       "sha256": "5cf409fda0a7e3a20500bd6dbc8270e0cbfed092dfe7ba41304099bc749d1049",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "order_item_id": {
+          "nulls": 0,
+          "total": "125000250000",
+          "distinct": 500000,
+          "min": null,
+          "max": null
+        },
+        "order_id": {
+          "nulls": 0,
+          "total": "49992117383",
+          "distinct": 183468,
+          "min": null,
+          "max": null
+        },
+        "product_id": {
+          "nulls": 0,
+          "total": "1335704474",
+          "distinct": 5000,
+          "min": null,
+          "max": null
+        },
+        "quantity": {
+          "nulls": 0,
+          "total": "845741",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "unit_price": {
+          "nulls": 0,
+          "total": "22510854.67",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "discount_amount": {
+          "nulls": 399755,
+          "total": "2532655.82",
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "returns": {
       "rows": 15000,
       "sha256": "ba266bc5e7028ab693590fc5e9d23e233422b599fad44c3b523fd16207fac320",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "return_id": {
+          "nulls": 0,
+          "total": "112507500",
+          "distinct": 15000,
+          "min": null,
+          "max": null
+        },
+        "order_item_id": {
+          "nulls": 0,
+          "total": "3751410622",
+          "distinct": 14766,
+          "min": null,
+          "max": null
+        },
+        "requested_at": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2022-01-05T04:12:11+00:00",
+          "max": "2025-01-30T21:50:31+00:00"
+        },
+        "reason": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "refund_amount": {
+          "nulls": 0,
+          "total": "560533.71",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "resolved_at": {
+          "nulls": 2269,
+          "total": null,
+          "distinct": null,
+          "min": "2022-01-05T11:03:00+00:00",
+          "max": "2025-02-26T15:47:16+00:00"
+        }
+      }
     }
   }
 }
