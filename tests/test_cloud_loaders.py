@@ -14,7 +14,8 @@ from sqlbench.datagen.generator import generate_dataset
 from sqlbench.datagen.tables import Profile
 from sqlbench.load.databricks_loader import DatabricksLoader
 from sqlbench.load.dataset import LoadError, load_dataset
-from sqlbench.load.snowflake_loader import SnowflakeLoader
+from sqlbench.load.snowflake_loader import SnowflakeLoader, copy_expression
+from sqlbench.schema.spec import ColumnSpec
 from sqlbench.warehouses.base import SessionContext
 
 FIXTURE = Path(__file__).parent / "fixtures" / "mini_shop.yaml"
@@ -122,8 +123,10 @@ def test_snowflake_replaces_the_schema_then_loads_each_table(generated: Path) ->
         "OVERWRITE = TRUE AUTO_COMPRESS = FALSE"
     )
     assert (
-        "COPY INTO mini_shop__edge.orders FROM @loading.files/mini_shop__edge/ "
-        "FILES = ('orders.parquet') MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE FORCE = TRUE"
+        "COPY INTO mini_shop__edge.events (customer_id, event_ts, event_name, payload) "
+        "FROM (SELECT $1:customer_id::BIGINT, $1:event_ts::TIMESTAMP_TZ, "
+        "$1:event_name::VARCHAR, PARSE_JSON($1:payload::STRING) "
+        "FROM @loading.files/mini_shop__edge/) FILES = ('events.parquet') FORCE = TRUE"
     ) in statements
     assert statements[-2:] == [
         "GRANT USAGE ON SCHEMA mini_shop__edge TO ROLE BENCH_READER",
@@ -131,15 +134,33 @@ def test_snowflake_replaces_the_schema_then_loads_each_table(generated: Path) ->
     ]
 
 
-def test_snowflake_parses_json_text_only_in_variant_columns(generated: Path) -> None:
-    connection = RecordingConnection()
-    load_edge(snowflake_loader(connection), generated)
+@pytest.mark.parametrize(
+    ("logical", "nullable", "expression"),
+    [
+        ("decimal(10,2)", False, "$1:c::NUMBER(10,2)"),
+        ("array<string>", True, "$1:c::ARRAY"),
+        ("variant", True, "PARSE_JSON($1:c::STRING)"),
+        (
+            "map<string,int>",
+            False,
+            "REDUCE(COALESCE($1:c:key_value, []), {}::OBJECT, "
+            "(acc, pair) -> OBJECT_INSERT(acc, pair:key::STRING, pair:value))",
+        ),
+        (
+            "map<string,int>",
+            True,
+            "REDUCE($1:c:key_value, {}::OBJECT, "
+            "(acc, pair) -> OBJECT_INSERT(acc, pair:key::STRING, pair:value))",
+        ),
+    ],
+)
+def test_snowflake_copy_reads_each_column_by_name(
+    logical: str, nullable: bool, expression: str
+) -> None:
+    # model_construct skips the generator settings, which COPY never looks at.
+    column = ColumnSpec.model_construct(name="c", type=logical, nullable=nullable)
 
-    updates = [sql for sql in connection.statements if sql.startswith("UPDATE")]
-    assert updates == [
-        "UPDATE mini_shop__edge.orders SET attributes = PARSE_JSON(attributes::STRING)",
-        "UPDATE mini_shop__edge.events SET payload = PARSE_JSON(payload::STRING)",
-    ]
+    assert copy_expression(column) == expression
 
 
 def test_snowflake_reload_sends_the_same_statements(generated: Path) -> None:

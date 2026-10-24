@@ -12,13 +12,35 @@ from snowflake.connector.errors import Error as SnowflakeError
 
 from sqlbench.load.dataset import DATABASE, LoadError
 from sqlbench.schema.ddl import create_table, self_reference_constraints, snowflake_type
-from sqlbench.schema.spec import TableSpec
+from sqlbench.schema.spec import ColumnSpec, TableSpec
 from sqlbench.schema.types import TypeKind
 from sqlbench.settings import require_env
 from sqlbench.warehouses.base import SessionContext, WarehouseName
 from sqlbench.warehouses.snowflake_warehouse import connect_owner_from_env
 
 STAGE = "loading.files"
+
+
+def copy_expression(column: ColumnSpec) -> str:
+    """How COPY reads one column from the staged Parquet row, which arrives as $1."""
+    field = f"$1:{column.name}"
+    kind = column.logical_type.kind
+    if kind == TypeKind.VARIANT:
+        # The Parquet column holds JSON text. Parsing turns the text 'null'
+        # into JSON null, while SQL NULL stays NULL.
+        return f"PARSE_JSON({field}::STRING)"
+    if kind == TypeKind.MAP:
+        # A Parquet map arrives as {"key_value": [{"key": ..., "value": ...}]},
+        # and an empty map as JSON null, so empty and NULL maps look the same.
+        # A NOT NULL map column gets an empty object for it.
+        pairs = f"{field}:key_value"
+        if not column.nullable:
+            pairs = f"COALESCE({pairs}, [])"
+        return (
+            f"REDUCE({pairs}, {{}}::OBJECT, "
+            "(acc, pair) -> OBJECT_INSERT(acc, pair:key::STRING, pair:value))"
+        )
+    return f"{field}::{snowflake_type(column.logical_type)}"
 
 
 class SnowflakeLoader:
@@ -61,21 +83,18 @@ class SnowflakeLoader:
             f"PUT 'file://{parquet_path.resolve()}' @{STAGE}/{target}/ "
             "OVERWRITE = TRUE AUTO_COMPRESS = FALSE"
         )
-        self.run(
-            f"COPY INTO {target}.{table.name} FROM @{STAGE}/{target}/ "
-            f"FILES = ('{parquet_path.name}') "
-            "MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE FORCE = TRUE"
-        )
-        # VARIANT columns hold JSON text in Parquet, and COPY stores it as a
-        # VARIANT string. Parsing turns it into objects and arrays; the text
-        # 'null' becomes JSON null and SQL NULL stays NULL.
-        variant_columns = []
+        names = []
+        expressions = []
         for column in table.columns:
-            if column.logical_type.kind == TypeKind.VARIANT:
-                variant_columns.append(column.name)
-        if variant_columns:
-            assignments = [f"{name} = PARSE_JSON({name}::STRING)" for name in variant_columns]
-            self.run(f"UPDATE {target}.{table.name} SET {', '.join(assignments)}")
+            names.append(column.name)
+            expressions.append(copy_expression(column))
+        # A transform rather than MATCH_BY_COLUMN_NAME, which can't reshape maps
+        # or parse JSON text, and fails on NOT NULL map columns with empty maps.
+        self.run(
+            f"COPY INTO {target}.{table.name} ({', '.join(names)}) "
+            f"FROM (SELECT {', '.join(expressions)} FROM @{STAGE}/{target}/) "
+            f"FILES = ('{parquet_path.name}') FORCE = TRUE"
+        )
 
     def grant_read(self, target: str) -> None:
         self.run(f"GRANT USAGE ON SCHEMA {target} TO ROLE {self._reader_role}")
