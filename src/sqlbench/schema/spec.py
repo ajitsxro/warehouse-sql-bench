@@ -343,6 +343,10 @@ class SchemaSpec(StrictModel):
         return ordered
 
 
+def is_self_reference(table: TableSpec, column: ColumnSpec) -> bool:
+    return column.references is not None and column.references.split(".")[0] == table.name
+
+
 def parents_of(table: TableSpec) -> set[str]:
     parents: set[str] = set()
     for column in table.columns:

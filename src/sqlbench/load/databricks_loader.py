@@ -11,7 +11,7 @@ from databricks.sql.client import Connection as DatabricksConnection
 from databricks.sql.exc import Error as DatabricksError
 
 from sqlbench.load.dataset import DATABASE, LoadError
-from sqlbench.schema.ddl import create_table, databricks_type
+from sqlbench.schema.ddl import create_table, databricks_type, self_reference_constraints
 from sqlbench.schema.spec import TableSpec
 from sqlbench.schema.types import TypeKind
 from sqlbench.settings import require_env
@@ -71,6 +71,8 @@ class DatabricksLoader:
         # CREATE TABLE then INSERT, instead of CREATE TABLE AS SELECT, so the
         # NOT NULL and key constraints from the DDL emitter are kept.
         self.run(create_table(table, databricks_type, target))
+        for statement in self_reference_constraints(table, target):
+            self.run(statement)
         names = []
         expressions = []
         for column in table.columns:
