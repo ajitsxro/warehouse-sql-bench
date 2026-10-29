@@ -17,6 +17,8 @@ from sqlbench.load.databricks_loader import DatabricksLoader
 from sqlbench.load.dataset import Loader, LoadError, load_dataset, read_manifest, session_context
 from sqlbench.load.duckdb_loader import DuckDBLoader
 from sqlbench.load.snowflake_loader import SnowflakeLoader
+from sqlbench.questions.lint import lint_files
+from sqlbench.questions.model import question_paths
 from sqlbench.schema.spec import load_schema
 from sqlbench.settings import MissingEnvError
 from sqlbench.warehouses.base import SessionContext, Warehouse, WarehouseName
@@ -29,6 +31,7 @@ CHECK_TIMEOUT_S = 120
 SCHEMAS_DIR = Path("schemas")
 DATA_DIR = Path("data")
 MANIFESTS_DIR = Path("manifests")
+QUESTIONS_DIR = Path("questions")
 DEFAULT_SEED = 20261105
 DUCKDB_FILE_NAME = "sqlbench.duckdb"
 
@@ -37,6 +40,8 @@ schema_app = typer.Typer(no_args_is_help=True, help="Check schema specs.")
 app.add_typer(schema_app, name="schema")
 data_app = typer.Typer(no_args_is_help=True, help="Generate and load benchmark data.")
 app.add_typer(data_app, name="data")
+questions_app = typer.Typer(no_args_is_help=True, help="Lint, check and verify questions.")
+app.add_typer(questions_app, name="questions")
 
 
 @app.callback()
@@ -247,4 +252,28 @@ def check_data(
             else:
                 typer.echo(f"{spec.name} ({each_profile}): matches the manifest")
     if failed:
+        raise typer.Exit(code=1)
+
+
+@questions_app.command("lint")
+def lint_questions(
+    schema: Annotated[str | None, typer.Option(help="One schema's questions; default is all.")] = (
+        None
+    ),
+    questions_dir: Annotated[Path, typer.Option("--dir")] = QUESTIONS_DIR,
+    schemas_dir: Annotated[Path, typer.Option("--schemas-dir")] = SCHEMAS_DIR,
+) -> None:
+    """Check question files without running anything on a warehouse."""
+    paths = question_paths(questions_dir, schema)
+    problems = lint_files(paths, schemas_dir)
+    failed_count = 0
+    for path, found in problems.items():
+        if not found:
+            continue
+        failed_count += 1
+        typer.echo(f"{path}:", err=True)
+        for problem in found:
+            typer.echo(f"  {problem}", err=True)
+    typer.echo(f"{len(paths)} questions, {failed_count} with problems")
+    if failed_count:
         raise typer.Exit(code=1)
