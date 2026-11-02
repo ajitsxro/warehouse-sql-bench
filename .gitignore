@@ -11,3 +11,7 @@ mlruns/
 
 # os
 .DS_Store
+
+# private working notes
+CLAUDE.md
+.notes/
