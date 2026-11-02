@@ -15,3 +15,8 @@ mlruns/
 # private working notes
 CLAUDE.md
 .notes/
+
+# tool caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
