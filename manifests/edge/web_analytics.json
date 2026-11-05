@@ -1,0 +1,56 @@
+{
+  "schema_name": "web_analytics",
+  "profile": "edge",
+  "seed": 20261105,
+  "generator_version": 1,
+  "spec_sha256": "1a2505b85452b211f304ab888ecd3e1663b7d94890ad707fba75a53b9cf30efb",
+  "pyarrow_version": "26.0.0",
+  "tables": {
+    "visitors": {
+      "rows": 300,
+      "sha256": "5288368879552579109abcb0e47c4a727f9a659da1c8ae00271b895cbf442ea4",
+      "injectors": [
+        "empty_groups",
+        "nulls",
+        "boundary_dates",
+        "messy_strings",
+        "ties"
+      ]
+    },
+    "sessions": {
+      "rows": 600,
+      "sha256": "a5fb41abcc78ef8ed75a638fc9610a4b0cf583c669b29b7311de8fe9b5fc6175",
+      "injectors": [
+        "empty_groups",
+        "nulls",
+        "boundary_dates",
+        "semi_structured",
+        "messy_strings",
+        "ties"
+      ]
+    },
+    "pageviews": {
+      "rows": 1515,
+      "sha256": "5e7b3a43db6e253240e1cacc75ef236bc1223b28b8cc88e5f36ca74512f0bc29",
+      "injectors": [
+        "nulls",
+        "boundary_dates",
+        "messy_strings",
+        "ties",
+        "duplicates"
+      ]
+    },
+    "events": {
+      "rows": 1010,
+      "sha256": "7006e24be2e4854c304f23af5ae133f984f13c267349b3cae76841f5f65df367",
+      "injectors": [
+        "nulls",
+        "boundary_dates",
+        "semi_structured",
+        "messy_strings",
+        "ties",
+        "duplicates"
+      ]
+    }
+  }
+}

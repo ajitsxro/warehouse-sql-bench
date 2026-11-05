@@ -1,0 +1,30 @@
+{
+  "schema_name": "web_analytics",
+  "profile": "main",
+  "seed": 20261105,
+  "generator_version": 1,
+  "spec_sha256": "1a2505b85452b211f304ab888ecd3e1663b7d94890ad707fba75a53b9cf30efb",
+  "pyarrow_version": "26.0.0",
+  "tables": {
+    "visitors": {
+      "rows": 60000,
+      "sha256": "4ea3fa8235090cbe0c5d2648bd51ba30f1144e186dfaae835ad15934ac4f391c",
+      "injectors": []
+    },
+    "sessions": {
+      "rows": 150000,
+      "sha256": "b65721ed2f3bc7c0816b925df2e38c8c75d3e74d2300d813b4094260f036c698",
+      "injectors": []
+    },
+    "pageviews": {
+      "rows": 500000,
+      "sha256": "a6a5fdd7ac439ac678290f685a01c5abfa8e4eaa5bd84141ac53d71f38a9f1d4",
+      "injectors": []
+    },
+    "events": {
+      "rows": 300000,
+      "sha256": "12044ec8fc56ed50bbca321668a2973df29b462b37d16bb73e365957657e929e",
+      "injectors": []
+    }
+  }
+}

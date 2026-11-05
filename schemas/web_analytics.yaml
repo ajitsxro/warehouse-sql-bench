@@ -1,0 +1,147 @@
+name: web_analytics
+description: >
+  Product analytics for a website: visitors start sessions, sessions contain
+  pageviews and tracked events. Sessions carry UTM attribution as a struct
+  and free-form tags as an array; events carry properties as JSON.
+  Pageview and event times are generated independently of the session
+  start, so they are not guaranteed to fall inside the session window.
+
+tables:
+  - name: visitors
+    rows: 60000
+    edge_rows: 300
+    primary_key: visitor_id
+    columns:
+      - {name: visitor_id, type: bigint, gen: {distribution: sequence}}
+      - {name: first_seen_at, type: timestamp_ntz, gen: {min: 2023-01-01, max: 2024-12-31}}
+      - name: country
+        type: string
+        gen:
+          values: [US, IN, GB, DE, BR, CA, FR, JP, MX, AU]
+          weights: [35, 15, 9, 7, 7, 6, 6, 5, 5, 5]
+      - name: device_type
+        type: string
+        gen: {values: [desktop, mobile, tablet], weights: [45, 48, 7]}
+      - name: browser
+        type: string
+        gen: {values: [chrome, safari, firefox, edge, other], weights: [60, 25, 6, 6, 3]}
+      - name: user_id
+        type: bigint
+        nullable: true
+        description: Set once the visitor signs in; NULL for anonymous visitors.
+        gen: {min: 100000, max: 999999, null_rate: 0.7}
+
+  - name: sessions
+    rows: 150000
+    edge_rows: 600
+    primary_key: session_id
+    columns:
+      - {name: session_id, type: bigint, gen: {distribution: sequence}}
+      - name: visitor_id
+        type: bigint
+        references: visitors.visitor_id
+        gen: {distribution: zipf, exponent: 1.2}
+      - {name: started_at, type: timestamp_ntz, gen: {min: 2023-01-01, max: 2024-12-31}}
+      - {name: ended_at, type: timestamp_ntz, gen: {after: started_at, max_gap_days: 0.1}}
+      - name: landing_page
+        type: string
+        gen:
+          values: [/, /pricing, /blog, /docs, /signup, /features, /contact]
+          weights: [35, 15, 20, 12, 8, 7, 3]
+      - name: utm
+        type: struct<source:string,medium:string,campaign:string>
+        nullable: true
+        description: NULL for direct traffic with no UTM parameters.
+        gen:
+          null_rate: 0.35
+          shape:
+            type: object
+            fields:
+              source: {type: string, values: [google, newsletter, linkedin, twitter, partner]}
+              medium: {type: string, values: [cpc, email, social, referral]}
+              campaign:
+                type: string
+                values: [spring_sale, launch_2024, retargeting, webinar]
+                null_rate: 0.3
+      - name: tags
+        type: array<string>
+        gen:
+          shape:
+            type: array
+            max_items: 3
+            element: {type: string, values: [returning, paid, logged_in, bot_suspect, mobile_app]}
+      - {name: is_bounce, type: bool}
+
+  - name: pageviews
+    rows: 500000
+    edge_rows: 1500
+    columns:
+      - name: session_id
+        type: bigint
+        references: sessions.session_id
+        gen: {distribution: uniform}
+      - {name: viewed_at, type: timestamp_ntz, gen: {min: 2023-01-01, max: 2024-12-31}}
+      - name: page_path
+        type: string
+        gen:
+          values: [/, /pricing, /blog, /blog/post, /docs, /docs/api, /signup, /features, /contact]
+          weights: [22, 12, 10, 18, 9, 9, 6, 9, 5]
+      - name: referrer
+        type: string
+        nullable: true
+        gen:
+          values: [google.com, bing.com, news.ycombinator.com, linkedin.com, t.co]
+          weights: [55, 8, 12, 15, 10]
+          null_rate: 0.4
+      - name: load_time_ms
+        type: int
+        gen: {distribution: lognormal, mean: 6.5, sigma: 0.6, min: 50, max: 60000}
+      - name: scroll_depth_pct
+        type: int
+        nullable: true
+        gen: {min: 0, max: 100, null_rate: 0.1}
+
+  - name: events
+    rows: 300000
+    edge_rows: 1000
+    columns:
+      - name: session_id
+        type: bigint
+        references: sessions.session_id
+        gen: {distribution: zipf, exponent: 1.05}
+      - {name: event_ts, type: timestamp_tz, gen: {min: 2023-01-01, max: 2024-12-31}}
+      - name: event_name
+        type: string
+        gen:
+          values: [click, add_to_cart, purchase, signup, video_play, search]
+          weights: [45, 15, 5, 5, 10, 20]
+      - name: properties
+        type: variant
+        nullable: true
+        gen:
+          null_rate: 0.05
+          shape:
+            type: object
+            fields:
+              element: {type: string, values: [button, link, image, form], optional: 0.2}
+              value: {type: number, min: 1, max: 500, scale: 2, optional: 0.6}
+              currency: {type: string, values: [USD, EUR, GBP], optional: 0.7}
+              search_query:
+                type: string
+                values: [pricing, api key, sso, export csv, delete account]
+                optional: 0.8
+              experiment:
+                type: object
+                optional: 0.7
+                fields:
+                  id: {type: string, pattern: "EXP-###"}
+                  variant: {type: string, values: [control, treatment]}
+              products:
+                type: array
+                optional: 0.5
+                max_items: 3
+                element:
+                  type: object
+                  fields:
+                    sku: {type: string, pattern: "SKU-#####"}
+                    price: {type: number, min: 1, max: 500, scale: 2}
