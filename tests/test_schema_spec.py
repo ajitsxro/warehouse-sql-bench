@@ -6,7 +6,7 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
-from sqlbench.schema.spec import TableSpec
+from sqlbench.schema.spec import SchemaSpec, TableSpec, load_schema
 
 FIXTURE = Path(__file__).parent / "fixtures" / "mini_shop.yaml"
 
@@ -25,6 +25,43 @@ def find_column(raw: dict[str, Any], table: str, column: str) -> dict[str, Any]:
                     found: dict[str, Any] = column_raw
                     return found
     raise KeyError(f"{table}.{column}")
+
+
+def test_fixture_loads_with_parents_before_children() -> None:
+    schema = load_schema(FIXTURE)
+
+    ordered = [table.name for table in schema.tables_in_dependency_order()]
+    assert ordered.index("customers") < ordered.index("orders")
+    assert ordered.index("customers") < ordered.index("events")
+    assert schema.table("events").primary_key is None
+    assert str(schema.table("orders").column("specs").logical_type) == "map<string,string>"
+
+
+def test_schema_name_must_match_file_name(tmp_path: Path) -> None:
+    path = tmp_path / "other_name.yaml"
+    path.write_text(FIXTURE.read_text())
+
+    with pytest.raises(ValueError, match="must match the file name"):
+        load_schema(path)
+
+
+def break_fk_target(raw: dict[str, Any]) -> None:
+    find_column(raw, "orders", "customer_id")["references"] = "customers.full_name"
+
+
+def break_fk_table(raw: dict[str, Any]) -> None:
+    find_column(raw, "orders", "customer_id")["references"] = "accounts.account_id"
+
+
+def break_fk_type(raw: dict[str, Any]) -> None:
+    find_column(raw, "orders", "customer_id")["type"] = "int"
+
+
+def make_cycle(raw: dict[str, Any]) -> None:
+    customers = raw["tables"][0]
+    customers["columns"].append(
+        {"name": "last_order_id", "type": "bigint", "references": "orders.order_id"}
+    )
 
 
 def null_rate_without_nullable(raw: dict[str, Any]) -> None:
@@ -95,3 +132,20 @@ def test_invalid_tables_are_rejected(breakage: Any, message: str) -> None:
 def test_fixture_tables_are_valid() -> None:
     for table_raw in fixture_dict()["tables"]:
         TableSpec.model_validate(table_raw)
+
+
+@pytest.mark.parametrize(
+    ("breakage", "message"),
+    [
+        (break_fk_target, "not the primary key"),
+        (break_fk_table, "unknown table accounts"),
+        (break_fk_type, "type differs"),
+        (make_cycle, "cycle"),
+    ],
+)
+def test_invalid_schemas_are_rejected(breakage: Any, message: str) -> None:
+    raw = fixture_dict()
+    breakage(raw)
+
+    with pytest.raises(ValidationError, match=message):
+        SchemaSpec.model_validate(raw)
