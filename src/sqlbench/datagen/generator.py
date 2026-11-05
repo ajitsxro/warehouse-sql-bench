@@ -9,6 +9,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from pydantic import BaseModel
 
+from sqlbench.datagen.edge import apply_edge_injectors
 from sqlbench.datagen.tables import Profile, TableData
 from sqlbench.datagen.values import derive_seed, generate_after, generate_values
 from sqlbench.schema.spec import SchemaSpec, load_schema
@@ -45,6 +46,8 @@ def generate_tables(schema: SchemaSpec, profile: Profile, seed: int) -> dict[str
 
         ordered = {column.name: values_by_column[column.name] for column in table.columns}
         tables[table.name] = TableData(table, ordered)
+    if profile == Profile.EDGE:
+        apply_edge_injectors(schema, tables, seed)
     return tables
 
 
