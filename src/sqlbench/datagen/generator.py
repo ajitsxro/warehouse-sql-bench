@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from sqlbench.datagen.edge import apply_edge_injectors
 from sqlbench.datagen.tables import Profile, TableData
-from sqlbench.datagen.values import derive_seed, generate_after, generate_values
+from sqlbench.datagen.values import JsonNull, derive_seed, generate_after, generate_values
 from sqlbench.schema.spec import SchemaSpec, load_schema
 from sqlbench.schema.types import LogicalType, TypeKind
 
@@ -115,6 +115,8 @@ def to_arrow_values(logical_type: LogicalType, values: list[Any]) -> list[Any]:
         for value in values:
             if value is None:
                 converted.append(None)
+            elif isinstance(value, JsonNull):
+                converted.append("null")
             else:
                 converted.append(json.dumps(value, separators=(",", ":")))
         return converted
