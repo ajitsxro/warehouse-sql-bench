@@ -56,6 +56,13 @@ def test_snowflake_programming_errors(
     assert categorize_snowflake_error(error) == ErrorCategory(category)
 
 
+def test_no_sqlstate_maps_to_blocked() -> None:
+    # BLOCKED is reserved for the read-only guard; warehouse errors never use it.
+    sqlstate_classes = ["00", "08", "21", "22", "28", "42", "57", "0A", "HY", "XX"]
+    for sqlstate_class in sqlstate_classes:
+        assert category_from_sqlstate(sqlstate_class + "000") != ErrorCategory.BLOCKED
+
+
 def test_snowflake_cancel_is_timeout_even_without_sqlstate() -> None:
     error = ProgrammingError(msg="SQL execution canceled", errno=604)
     assert categorize_snowflake_error(error) == ErrorCategory.TIMEOUT

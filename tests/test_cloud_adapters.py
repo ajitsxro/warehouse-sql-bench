@@ -111,7 +111,7 @@ def test_snowflake_guard_rejects_before_connecting() -> None:
     result = warehouse.execute("DELETE FROM t", timeout_s=30)
 
     assert result.error is not None
-    assert result.error.category == ErrorCategory.PERMISSION
+    assert result.error.category == ErrorCategory.BLOCKED
     assert opened == []
 
 
