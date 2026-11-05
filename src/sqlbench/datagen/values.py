@@ -1,9 +1,9 @@
 """Draw one column's values from its generator hints.
 
 Each column gets its own seed, so adding or reordering columns never changes
-the values of another column. Vectorized draws use numpy; patterns are filled
-one character at a time with Python's random module, which is much faster
-than numpy for many small scalar draws.
+the values of another column. Vectorized draws use numpy. Nested values are
+built one at a time with Python's random module, which is much faster than
+numpy for many small scalar draws.
 """
 
 import datetime
@@ -16,7 +16,7 @@ from typing import Any
 import numpy as np
 from faker import Faker
 
-from sqlbench.schema.spec import ColumnSpec, GenSpec
+from sqlbench.schema.spec import ColumnSpec, GenSpec, JsonShape
 from sqlbench.schema.types import INTEGER_KINDS, NUMERIC_KINDS, LogicalType, TypeKind
 
 FAKER_LOCALE = "en_US"
@@ -52,8 +52,28 @@ def generate_values(
     elif kind in (TypeKind.DATE, TypeKind.TIMESTAMP_NTZ, TypeKind.TIMESTAMP_TZ):
         values = draw_temporal(gen, kind, row_count, rng)
     else:
-        raise ValueError(f"cannot generate {kind} columns")
+        assert gen.shape is not None
+        shape_rng = random.Random(seed)
+        values = [generate_shape_value(gen.shape, shape_rng) for _ in range(row_count)]
 
+    return apply_null_rate(values, gen.null_rate, rng)
+
+
+def generate_after(column: ColumnSpec, anchors: list[Any], seed: int) -> list[Any]:
+    """Values later than the anchor column in the same row, by up to max_gap_days."""
+    rng = np.random.default_rng(seed)
+    gen = column.gen
+    assert gen.max_gap_days is not None
+    values: list[Any] = []
+    if column.logical_type.kind == TypeKind.DATE:
+        gap_days = rng.integers(0, int(gen.max_gap_days) + 1, len(anchors))
+        for anchor, days in zip(anchors, gap_days, strict=True):
+            values.append(None if anchor is None else anchor + datetime.timedelta(days=int(days)))
+    else:
+        gap_seconds = rng.integers(0, int(gen.max_gap_days * 86400) + 1, len(anchors))
+        for anchor, seconds in zip(anchors, gap_seconds, strict=True):
+            gap = datetime.timedelta(seconds=int(seconds))
+            values.append(None if anchor is None else anchor + gap)
     return apply_null_rate(values, gen.null_rate, rng)
 
 
@@ -204,3 +224,30 @@ def fill_pattern(pattern: str, rng: random.Random) -> str:
         else:
             characters.append(character)
     return "".join(characters)
+
+
+def generate_shape_value(shape: JsonShape, rng: random.Random) -> Any:
+    """One nested value. Objects come back as dicts with optional keys left out."""
+    if shape.null_rate > 0 and rng.random() < shape.null_rate:
+        return None
+    if shape.type == "object":
+        value: dict[str, Any] = {}
+        for name, field_shape in shape.fields.items():
+            if field_shape.optional > 0 and rng.random() < field_shape.optional:
+                continue
+            value[name] = generate_shape_value(field_shape, rng)
+        return value
+    if shape.type == "array":
+        assert shape.element is not None
+        length = rng.randint(shape.min_items, shape.max_items)
+        return [generate_shape_value(shape.element, rng) for _ in range(length)]
+    if shape.type == "int":
+        return rng.randint(int(shape.min), int(shape.max))
+    if shape.type == "number":
+        return round(rng.uniform(shape.min, shape.max), shape.scale)
+    if shape.type == "bool":
+        return rng.random() < 0.5
+    if shape.values is not None:
+        return rng.choice(shape.values)
+    assert shape.pattern is not None
+    return fill_pattern(shape.pattern, rng)
