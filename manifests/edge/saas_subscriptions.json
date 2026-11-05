@@ -1,0 +1,62 @@
+{
+  "schema_name": "saas_subscriptions",
+  "profile": "edge",
+  "seed": 20261105,
+  "generator_version": 1,
+  "spec_sha256": "f182f553b23157497e1a0af3a4803131fffd01735fdc51c596ebc46fe07a7dbb",
+  "pyarrow_version": "26.0.0",
+  "tables": {
+    "plans": {
+      "rows": 12,
+      "sha256": "f543934a744bcc94f4ce31efdbb1c19be523d7395a6abbba15f2b01c3cc75012",
+      "injectors": [
+        "empty_groups",
+        "semi_structured",
+        "messy_strings",
+        "ties"
+      ]
+    },
+    "accounts": {
+      "rows": 300,
+      "sha256": "18f86a94ee2408e8321d8c1c19c588976602d2f9d39897a2321783c4f79df82a",
+      "injectors": [
+        "empty_groups",
+        "boundary_dates",
+        "messy_strings",
+        "ties"
+      ]
+    },
+    "subscriptions": {
+      "rows": 400,
+      "sha256": "fb1ab83356857d528ae6bd2b60362b35a75bc7e55e96b328f5a9f0601f4fcd82",
+      "injectors": [
+        "empty_groups",
+        "nulls",
+        "boundary_dates",
+        "ties"
+      ]
+    },
+    "invoices": {
+      "rows": 800,
+      "sha256": "a8710a0531860df7d2c6118b1ca61d140ee1af530dc0fff7ef3f03392a10fefe",
+      "injectors": [
+        "nulls",
+        "boundary_dates",
+        "messy_strings",
+        "ties"
+      ]
+    },
+    "usage_events": {
+      "rows": 1515,
+      "sha256": "f6948c67c65b3b3c8a64bf8b697439cffab6146b6ccdad5c819281f2715aa849",
+      "injectors": [
+        "nulls",
+        "boundary_dates",
+        "semi_structured",
+        "messy_strings",
+        "ties",
+        "duplicates"
+      ]
+    }
+  }
+}

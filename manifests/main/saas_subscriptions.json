@@ -1,0 +1,35 @@
+{
+  "schema_name": "saas_subscriptions",
+  "profile": "main",
+  "seed": 20261105,
+  "generator_version": 1,
+  "spec_sha256": "f182f553b23157497e1a0af3a4803131fffd01735fdc51c596ebc46fe07a7dbb",
+  "pyarrow_version": "26.0.0",
+  "tables": {
+    "plans": {
+      "rows": 12,
+      "sha256": "22016837b881ffe752d2763ef39de30670380aac876fe35fe5f17aaac8e031f6",
+      "injectors": []
+    },
+    "accounts": {
+      "rows": 8000,
+      "sha256": "363ff0b64458a652e63832c3b67887bd20e7315c643fe2e6255200b27dc38f2c",
+      "injectors": []
+    },
+    "subscriptions": {
+      "rows": 20000,
+      "sha256": "210930ca3826aa237934e642ab154af93f8f4e3c40a3d4a25ed371afaf3cf7dd",
+      "injectors": []
+    },
+    "invoices": {
+      "rows": 120000,
+      "sha256": "db22dbfca5b0d2c00379367d940bf31900f4d466cbf34991afc4d71671f68169",
+      "injectors": []
+    },
+    "usage_events": {
+      "rows": 500000,
+      "sha256": "eecfd2ba61fab41fe1670ad4c75813104742467de3ed23fd6e5767195f695163",
+      "injectors": []
+    }
+  }
+}
