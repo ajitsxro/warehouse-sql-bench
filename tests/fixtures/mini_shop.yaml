@@ -1,0 +1,106 @@
+# Small schema that uses every logical type, so tests cover all code paths.
+name: mini_shop
+description: Customers, orders and events, sized for fast tests.
+tables:
+  - name: customers
+    rows: 300
+    edge_rows: 120
+    primary_key: customer_id
+    columns:
+      - {name: customer_id, type: bigint, gen: {distribution: sequence}}
+      - {name: full_name, type: string, gen: {faker: name, cardinality: 200}}
+      - name: segment
+        type: string
+        nullable: true
+        gen: {values: [consumer, business], weights: [3, 1], null_rate: 0.05}
+      - {name: signup_date, type: date, gen: {min: 2023-01-01, max: 2024-12-31}}
+      - {name: is_active, type: bool}
+      - name: tags
+        type: array<string>
+        nullable: true
+        gen:
+          shape:
+            type: array
+            max_items: 3
+            element: {type: string, values: [vip, churn_risk, newsletter]}
+      - name: address
+        type: struct<city:string,zip:string>
+        gen:
+          shape:
+            type: object
+            fields:
+              city: {type: string, values: [Austin, Boston, Denver]}
+              zip: {type: string, pattern: "#####"}
+
+  - name: orders
+    rows: 1000
+    edge_rows: 400
+    primary_key: order_id
+    columns:
+      - {name: order_id, type: bigint, gen: {distribution: sequence}}
+      - name: customer_id
+        type: bigint
+        nullable: true
+        references: customers.customer_id
+        gen: {distribution: zipf, null_rate: 0.02}
+      - {name: placed_at, type: timestamp_ntz, gen: {min: 2023-01-01, max: 2024-12-31}}
+      - name: shipped_at
+        type: timestamp_ntz
+        nullable: true
+        gen: {after: placed_at, max_gap_days: 10, null_rate: 0.1}
+      - name: total
+        type: decimal(10,2)
+        gen: {distribution: lognormal, mean: 3.5, sigma: 0.7, min: 1, max: 2000}
+      - {name: quantity, type: int, gen: {min: 1, max: 5}}
+      - name: weight_kg
+        type: double
+        nullable: true
+        gen: {distribution: normal, mean: 2.0, sigma: 0.5, min: 0.1}
+      - name: attributes
+        type: variant
+        nullable: true
+        gen:
+          shape:
+            type: object
+            fields:
+              channel: {type: string, values: [web, app, phone]}
+              coupon: {type: string, pattern: "SAVE##", optional: 0.7}
+              gift: {type: bool, optional: 0.5, null_rate: 0.2}
+              items:
+                type: array
+                min_items: 1
+                max_items: 4
+                element:
+                  type: object
+                  fields:
+                    sku: {type: string, pattern: "SKU-####"}
+                    qty: {type: int, min: 1, max: 3}
+                    price: {type: number, min: 1, max: 100, scale: 2}
+      - name: specs
+        type: map<string,string>
+        gen:
+          shape:
+            type: object
+            fields:
+              color: {type: string, values: [red, blue], optional: 0.5}
+              size: {type: string, values: [S, M, L], optional: 0.5}
+
+  - name: events
+    rows: 1500
+    edge_rows: 500
+    columns:
+      - name: customer_id
+        type: bigint
+        references: customers.customer_id
+        gen: {distribution: uniform}
+      - {name: event_ts, type: timestamp_tz, gen: {min: 2023-01-01, max: 2024-12-31}}
+      - {name: event_name, type: string, gen: {values: [view, click, purchase]}}
+      - name: payload
+        type: variant
+        nullable: true
+        gen:
+          shape:
+            type: object
+            fields:
+              page: {type: string, values: [/home, /cart, /checkout]}
+              duration_ms: {type: int, min: 10, max: 5000, optional: 0.3}
