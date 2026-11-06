@@ -5,6 +5,7 @@ from enum import StrEnum
 from typing import Any
 
 from sqlbench.scoring import SCORER_VERSION
+from sqlbench.scoring.diagnostics import Diagnostic, diagnose
 from sqlbench.scoring.matching import MatchRules, find_column_order
 from sqlbench.scoring.normalize import normalize_rows, numbers_equal
 from sqlbench.warehouses.base import ErrorCategory, QueryResult
@@ -46,6 +47,8 @@ class DatasetScore:
     outcome: Outcome
     # For each gold column, the predicted column that matched it (when correct).
     column_order: tuple[int, ...] | None = None
+    # Near-miss labels for wrong_result and wrong_columns; never affect the outcome.
+    diagnostics: tuple[Diagnostic, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -80,18 +83,25 @@ def score_dataset(
         return DatasetScore(Outcome.NO_SQL)
     if predicted.error is not None:
         return DatasetScore(ERROR_OUTCOMES[predicted.error.category])
-    if len(predicted.columns) != len(gold.columns):
-        return DatasetScore(Outcome.WRONG_COLUMNS)
-    if gold.rows and not predicted.rows:
-        return DatasetScore(Outcome.EMPTY_RESULT)
-
+    gold_width = len(gold.columns)
+    predicted_width = len(predicted.columns)
     gold_rows = normalize_rows(gold.rows, [column.type for column in gold.columns])
     predicted_rows = normalize_rows(predicted.rows, [column.type for column in predicted.columns])
-    width = len(gold.columns)
+    if predicted_width != gold_width:
+        labels = diagnose(
+            gold_rows, predicted_rows, gold_width, predicted_width, order_matters, tolerance
+        )
+        return DatasetScore(Outcome.WRONG_COLUMNS, diagnostics=labels)
+    if gold_rows and not predicted_rows:
+        return DatasetScore(Outcome.EMPTY_RESULT)
+
     rules = match_rules(order_matters, tolerance)
-    order = find_column_order(gold_rows, predicted_rows, width, width, rules)
+    order = find_column_order(gold_rows, predicted_rows, gold_width, gold_width, rules)
     if order is None:
-        return DatasetScore(Outcome.WRONG_RESULT)
+        labels = diagnose(
+            gold_rows, predicted_rows, gold_width, gold_width, order_matters, tolerance
+        )
+        return DatasetScore(Outcome.WRONG_RESULT, diagnostics=labels)
     return DatasetScore(Outcome.CORRECT, order)
 
 
