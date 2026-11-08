@@ -3,14 +3,15 @@
 Each gold runs on its own warehouse, against main and against edge: four
 runs. Main and edge hold different data, so results are compared across
 warehouses within a dataset: Snowflake main against Databricks main, and
-the same for edge.
+the same for edge. The comparison is the scorer's, with the Snowflake
+result standing in as gold.
 """
 
 from dataclasses import dataclass, field
 
 from sqlbench.datagen.tables import Profile
-from sqlbench.questions.compare import first_difference, normalize_rows
 from sqlbench.questions.model import Question
+from sqlbench.scoring.outcomes import Outcome, score_dataset
 from sqlbench.warehouses.base import QueryResult, Warehouse, WarehouseName
 
 GOLD_WAREHOUSES = (WarehouseName.SNOWFLAKE, WarehouseName.DATABRICKS)
@@ -59,13 +60,18 @@ def check_question(question: Question, targets: GoldTargets) -> GoldCheck:
         return check
 
     for profile in PROFILES:
-        normalized = []
-        for warehouse in GOLD_WAREHOUSES:
-            rows = check.run(warehouse, profile).rows
-            normalized.append(normalize_rows(rows, question.order_matters))
-        difference = first_difference(normalized[0], normalized[1], question.float_tolerance)
-        if difference is not None:
-            check.failures.append(f"{profile}: snowflake and databricks differ: {difference}")
+        snowflake = check.run(WarehouseName.SNOWFLAKE, profile)
+        databricks = check.run(WarehouseName.DATABRICKS, profile)
+        scored = score_dataset(
+            snowflake, databricks, question.order_matters, question.float_tolerance
+        )
+        if scored.outcome != Outcome.CORRECT:
+            detail = f"{len(snowflake.rows)} vs {len(databricks.rows)} rows"
+            if scored.diagnostics:
+                detail += f"; {', '.join(scored.diagnostics)}"
+            check.failures.append(
+                f"{profile}: snowflake and databricks differ: {scored.outcome} ({detail})"
+            )
 
     for warehouse in GOLD_WAREHOUSES:
         main_rows = check.run(warehouse, Profile.MAIN).rows

@@ -1,7 +1,5 @@
 """Gold checks: the stand-in comparison, the four-run check, and `bench questions check`."""
 
-import datetime
-from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -12,7 +10,6 @@ from typer.testing import CliRunner
 from sqlbench import cli
 from sqlbench.datagen.tables import Profile
 from sqlbench.questions.check import check_question
-from sqlbench.questions.compare import first_difference, normalize_rows, normalize_value
 from sqlbench.questions.model import Question
 from sqlbench.warehouses.base import (
     ErrorCategory,
@@ -39,45 +36,6 @@ def question(**changes: Any) -> Question:
     return Question.model_validate(data)
 
 
-@pytest.mark.parametrize(
-    ("snowflake", "databricks"),
-    [
-        (Decimal("3"), 3),
-        (Decimal("2.50"), 2.5),
-        ('{\n  "b": 1,\n  "a": [1, 2]\n}', {"a": [1, 2], "b": 1}),
-        ('{\n  "size": "L"\n}', [("size", "L")]),
-        ('[\n  "x"\n]', ["x"]),
-        (
-            datetime.datetime(2024, 3, 10, 2, 0, tzinfo=datetime.UTC),
-            datetime.datetime(2024, 3, 10, 2, 0),
-        ),
-    ],
-)
-def test_values_from_the_two_warehouses_normalize_alike(snowflake: Any, databricks: Any) -> None:
-    assert normalize_value(snowflake) == normalize_value(databricks)
-
-
-def test_text_that_only_looks_like_json_stays_text() -> None:
-    assert normalize_value("[draft") == "[draft"
-
-
-def test_rows_are_sorted_unless_order_matters() -> None:
-    rows: Rows = [("b", 2), (None, 3), ("a", 1)]
-
-    assert normalize_rows(rows, order_matters=False) == [(None, 3), ("a", 1), ("b", 2)]
-    assert normalize_rows(rows, order_matters=True) == rows
-
-
-def test_numbers_match_within_the_tolerance_only() -> None:
-    assert first_difference([(1.0,)], [(1.004,)], tolerance=0.01) is None
-    assert first_difference([(1.0,)], [(1.004,)], tolerance=0) == "row 1: (1.0,) vs (1.004,)"
-
-
-def test_differences_in_shape_are_described() -> None:
-    assert first_difference([(1,)], [(1,), (2,)], 0) == "1 rows vs 2 rows"
-    assert first_difference([(1,)], [(1, 2)], 0) == "1 columns vs 2 columns"
-
-
 def test_matching_golds_pass_and_each_runs_on_its_own_warehouse() -> None:
     fakes = targets([(1,)], [(1,)], [(2,)], [(2,)])
 
@@ -92,7 +50,7 @@ def test_matching_golds_pass_and_each_runs_on_its_own_warehouse() -> None:
 def test_a_difference_on_edge_fails_even_if_main_matches() -> None:
     check = check_question(question(), as_targets(targets([(1,)], [(1,)], [(2,)], [(3,)])))
 
-    assert check.failures == ["edge: snowflake and databricks differ: row 1: (2,) vs (3,)"]
+    assert check.failures == ["edge: snowflake and databricks differ: wrong_result (1 vs 1 rows)"]
 
 
 def test_main_and_edge_are_not_compared_with_each_other() -> None:
@@ -123,6 +81,16 @@ def test_query_errors_fail_without_comparing() -> None:
     check = check_question(question(), as_targets(fakes))
 
     assert check.failures == ["databricks/main: syntax: bad column"]
+
+
+def test_failures_show_near_miss_labels() -> None:
+    fakes = targets([(1,), (2,)], [(1,)], [(1,)], [(1,)])
+
+    check = check_question(question(), as_targets(fakes))
+
+    assert check.failures == [
+        "main: snowflake and databricks differ: wrong_result (2 vs 1 rows; row_subset)"
+    ]
 
 
 def test_order_matters_compares_rows_in_order() -> None:
@@ -166,7 +134,7 @@ def test_cli_check_reports_each_question_and_closes_connections(
     assert result.exit_code == 1
     assert "Estimated cost: 2 queries" in result.output
     assert "mini_shop_001: failed" in result.output
-    assert "edge: snowflake and databricks differ: 1 rows vs 0 rows" in result.output
+    assert "edge: snowflake and databricks differ: empty_result (1 vs 0 rows)" in result.output
     assert len(opened) == 4
     assert all(fake.closed for fake in opened)
 
