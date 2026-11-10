@@ -1,10 +1,18 @@
-"""Databricks adapter for a SQL warehouse, authenticated with a personal access token."""
+"""Databricks adapter for a SQL warehouse.
+
+Benchmark queries authenticate as a service principal that can only SELECT
+from the benchmark catalog, a second safety layer behind the read-only guard.
+Loading uses the owner's personal access token.
+"""
 
 import re
 import time
 from collections.abc import Callable
+from typing import Any
 
 from databricks import sql as databricks_sql
+from databricks.sdk.core import Config, oauth_service_principal
+from databricks.sdk.credentials_provider import OAuthCredentialsProvider
 from databricks.sql.client import Connection as DatabricksConnection
 from databricks.sql.exc import Error as DatabricksError
 
@@ -23,7 +31,9 @@ from sqlbench.warehouses.deadline import Deadline
 from sqlbench.warehouses.guard import check_read_only
 from sqlbench.warehouses.sqlstate import category_from_sqlstate
 
-ENV_VARS = ["DATABRICKS_SERVER_HOSTNAME", "DATABRICKS_HTTP_PATH", "DATABRICKS_TOKEN"]
+SHARED_ENV_VARS = ["DATABRICKS_SERVER_HOSTNAME", "DATABRICKS_HTTP_PATH"]
+OWNER_ENV_VARS = ["DATABRICKS_TOKEN"]
+READER_ENV_VARS = ["DATABRICKS_READER_CLIENT_ID", "DATABRICKS_READER_CLIENT_SECRET"]
 # The client cancels at timeout_s. The server timeout is a little longer, as a
 # backstop in case the cancel request is lost, so the client normally fires
 # first and the failure is reliably reported as a timeout.
@@ -45,15 +55,39 @@ def categorize_databricks_error(error: DatabricksError) -> ErrorCategory:
 
 
 def connect_from_env(context: SessionContext) -> DatabricksConnection:
-    env = require_env(ENV_VARS)
+    """Connect as the read-only service principal (OAuth machine-to-machine)."""
+    env = require_env(SHARED_ENV_VARS + READER_ENV_VARS)
+
+    def credentials_provider() -> OAuthCredentialsProvider:
+        # Built only when the connector asks for credentials: creating the
+        # Config already contacts the workspace's OAuth endpoint.
+        config = Config(
+            host=f"https://{env['DATABRICKS_SERVER_HOSTNAME']}",
+            client_id=env["DATABRICKS_READER_CLIENT_ID"],
+            client_secret=env["DATABRICKS_READER_CLIENT_SECRET"],
+        )
+        # The SDK helper is decorated, which hides its return type from mypy.
+        provider: OAuthCredentialsProvider = oauth_service_principal(config)
+        return provider
+
+    return connect(env, context, credentials_provider=credentials_provider)
+
+
+def connect_owner_from_env(context: SessionContext, **options: Any) -> DatabricksConnection:
+    """Connect with the owner's token, for loading. options go to databricks.sql.connect."""
+    env = require_env(SHARED_ENV_VARS + OWNER_ENV_VARS)
+    return connect(env, context, access_token=env["DATABRICKS_TOKEN"], **options)
+
+
+def connect(env: dict[str, str], context: SessionContext, **auth: Any) -> DatabricksConnection:
     connection = databricks_sql.connect(
         server_hostname=env["DATABRICKS_SERVER_HOSTNAME"],
         http_path=env["DATABRICKS_HTTP_PATH"],
-        access_token=env["DATABRICKS_TOKEN"],
         catalog=context.database,
         schema=context.schema,
         _retry_stop_after_attempts_count=CONNECT_RETRY_ATTEMPTS,
         _retry_stop_after_attempts_duration=CONNECT_RETRY_BUDGET_S,
+        **auth,
     )
     pin_time_zone(connection)
     return connection

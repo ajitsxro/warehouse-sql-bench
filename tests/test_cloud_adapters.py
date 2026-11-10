@@ -211,12 +211,12 @@ def test_databricks_server_error_uses_sqlstate() -> None:
 def test_missing_credentials_raise_before_any_network_call(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    for name in ["SNOWFLAKE_ACCOUNT", "DATABRICKS_SERVER_HOSTNAME"]:
+    for name in ["SNOWFLAKE_READER_USER", "DATABRICKS_READER_CLIENT_ID"]:
         monkeypatch.delenv(name, raising=False)
 
-    with pytest.raises(MissingEnvError, match="SNOWFLAKE_ACCOUNT"):
+    with pytest.raises(MissingEnvError, match="SNOWFLAKE_READER_USER"):
         SnowflakeWarehouse().execute("SELECT 1", timeout_s=30)
-    with pytest.raises(MissingEnvError, match="DATABRICKS_SERVER_HOSTNAME"):
+    with pytest.raises(MissingEnvError, match="DATABRICKS_READER_CLIENT_ID"):
         DatabricksWarehouse().execute("SELECT 1", timeout_s=30)
 
 
@@ -225,7 +225,8 @@ def test_databricks_connect_sets_context_utc_and_caps_retries(
 ) -> None:
     monkeypatch.setenv("DATABRICKS_SERVER_HOSTNAME", "example.cloud.databricks.com")
     monkeypatch.setenv("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/abc")
-    monkeypatch.setenv("DATABRICKS_TOKEN", "not-a-real-token")
+    monkeypatch.setenv("DATABRICKS_READER_CLIENT_ID", "reader-id")
+    monkeypatch.setenv("DATABRICKS_READER_CLIENT_SECRET", "not-a-real-secret")
     captured: dict[str, Any] = {}
     cursor = FakeCursor([], pa.table({}))
 
@@ -239,14 +240,19 @@ def test_databricks_connect_sets_context_utc_and_caps_retries(
 
     assert captured["catalog"] == "sqlbench"
     assert captured["schema"] == "ecommerce__edge"
+    # The read-only principal signs in with OAuth, never with the owner's token.
+    assert "access_token" not in captured
+    assert callable(captured["credentials_provider"])
     assert cursor.executed == ["SET TIME ZONE 'UTC'"]
     assert captured["_retry_stop_after_attempts_count"] == 3
     assert captured["_retry_stop_after_attempts_duration"] == 30
 
 
 def test_snowflake_connect_sets_context_and_utc(monkeypatch: pytest.MonkeyPatch) -> None:
-    for name in snowflake_warehouse.ENV_VARS:
+    for name in snowflake_warehouse.SHARED_ENV_VARS:
         monkeypatch.setenv(name, "x")
+    monkeypatch.setenv("SNOWFLAKE_READER_USER", "BENCH_READER_USER")
+    monkeypatch.setenv("SNOWFLAKE_READER_ROLE", "BENCH_READER")
     captured: dict[str, Any] = {}
 
     def fake_connect(**kwargs: Any) -> None:
@@ -256,6 +262,9 @@ def test_snowflake_connect_sets_context_and_utc(monkeypatch: pytest.MonkeyPatch)
 
     snowflake_warehouse.connect_from_env(CONTEXT)
 
+    # Benchmark queries never log in as the owner.
+    assert captured["user"] == "BENCH_READER_USER"
+    assert captured["role"] == "BENCH_READER"
     assert captured["database"] == "sqlbench"
     assert captured["schema"] == "ecommerce__edge"
     assert captured["session_parameters"] == {"QUERY_TAG": "sqlbench", "TIMEZONE": "UTC"}
