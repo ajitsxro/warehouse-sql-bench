@@ -19,7 +19,8 @@
   # The only snapshot listed for this model; it has no dated id.
   version: gpt-6-astra
   max_tokens: 16000
-  temperature: 0
+  # The API accepts only the default temperature (1); 0 returns a 400.
+  temperature: null
   input_usd_per_million: 10.00
   output_usd_per_million: 50.00
   requests_per_minute: 50
