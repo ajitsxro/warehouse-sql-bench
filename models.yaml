@@ -1,2 +1,70 @@
-# Models under test. Entries are added in the part that builds the generation harness.
-[]
+# Models under test. Prices are USD per 1M tokens, from each provider's pricing
+# page on 2026-11-10; re-check before a run, and update here if they change.
+# temperature: null means the parameter is not sent, because the API rejects it.
+
+- id: claude-opus-5-5
+  provider: anthropic
+  model: claude-opus-5-5
+  version: claude-opus-5-5
+  max_tokens: 16000
+  # Current Claude models return 400 for temperature; thinking is always on.
+  temperature: null
+  input_usd_per_million: 4.00
+  output_usd_per_million: 20.00
+  requests_per_minute: 50
+
+- id: gpt-6-astra
+  provider: openai
+  model: gpt-6-astra
+  # The only snapshot listed for this model; it has no dated id.
+  version: gpt-6-astra
+  max_tokens: 16000
+  temperature: 0
+  input_usd_per_million: 10.00
+  output_usd_per_million: 50.00
+  requests_per_minute: 50
+
+- id: gemini-4-carbon
+  provider: google
+  model: gemini-4-carbon
+  version: gemini-4-carbon
+  max_tokens: 16000
+  temperature: 0
+  # Introductory price; Google lists $4.00 / $20.00 from 2026-12-01.
+  input_usd_per_million: 2.00
+  output_usd_per_million: 10.00
+  requests_per_minute: 50
+
+- id: qwen3-coder
+  provider: openrouter
+  model: qwen/qwen3-coder
+  # Qwen3-Coder-480B-A35B-Instruct; OpenRouter picks the upstream provider,
+  # which is recorded with each response.
+  version: qwen/qwen3-coder
+  max_tokens: 8192
+  temperature: 0
+  input_usd_per_million: 0.30
+  output_usd_per_million: 1.00
+  requests_per_minute: 50
+
+- id: deepseek-v4-pro-0813
+  provider: openrouter
+  model: deepseek/deepseek-v4-pro-0813
+  version: deepseek/deepseek-v4-pro-0813
+  max_tokens: 16000
+  temperature: 0
+  input_usd_per_million: 0.111
+  output_usd_per_million: 4.44
+  requests_per_minute: 50
+
+- id: arctic-text2sql-r1-7b
+  provider: ollama
+  # No hosted API serves this model; it runs locally through Ollama from a
+  # GGUF build of Snowflake/Arctic-Text2SQL-R1-7B (8-bit quantization).
+  model: hf.co/mradermacher/Arctic-Text2SQL-R1-7B-GGUF:Q8_0
+  version: Snowflake/Arctic-Text2SQL-R1-7B GGUF Q8_0
+  max_tokens: 4096
+  temperature: 0
+  input_usd_per_million: 0.00
+  output_usd_per_million: 0.00
+  requests_per_minute: 600

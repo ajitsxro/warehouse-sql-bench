@@ -1,0 +1,16 @@
+You are writing a SQL query for {warehouse_name}. Use the {dialect} dialect.
+
+The tables below are in the current schema. Refer to them by their bare
+names, without a database or schema prefix. The session time zone is UTC.
+
+Table definitions:
+
+{ddl}
+
+Sample rows (the first 3 rows of each table):
+
+{sample_rows}
+
+Question: {question}
+
+Return one SQL query in a ```sql block.
