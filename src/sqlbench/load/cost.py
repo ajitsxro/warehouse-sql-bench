@@ -1,4 +1,4 @@
-"""Rough upper bounds on what a load costs, printed before any real load runs.
+"""Rough upper bounds on what a load or check costs, printed before it runs.
 
 The per-table time is a deliberately high guess for the smallest warehouse
 size; real loads of these files take a few seconds per table. Prices are
@@ -16,7 +16,7 @@ DATABRICKS_2XSMALL_DBU_PER_HOUR = 4.0
 DATABRICKS_USD_PER_DBU = 0.70
 
 
-def load_cost_estimate(warehouse: WarehouseName, table_count: int) -> str:
+def cost_estimate(warehouse: WarehouseName, table_count: int) -> str:
     hours = (table_count * SECONDS_PER_TABLE + SUSPEND_AFTER_S) / 3600
     if warehouse == WarehouseName.SNOWFLAKE:
         credits = hours * SNOWFLAKE_XSMALL_CREDITS_PER_HOUR

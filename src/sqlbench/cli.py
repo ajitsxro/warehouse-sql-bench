@@ -4,25 +4,28 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
 
+import duckdb
 import typer
 import yaml
 from dotenv import load_dotenv
 
 from sqlbench.datagen.generator import generate_dataset
 from sqlbench.datagen.tables import Profile
-from sqlbench.load.cost import load_cost_estimate
+from sqlbench.load.check import check_dataset
+from sqlbench.load.cost import cost_estimate
 from sqlbench.load.databricks_loader import DatabricksLoader
-from sqlbench.load.dataset import Loader, LoadError, load_dataset
+from sqlbench.load.dataset import Loader, LoadError, load_dataset, read_manifest, session_context
 from sqlbench.load.duckdb_loader import DuckDBLoader
 from sqlbench.load.snowflake_loader import SnowflakeLoader
 from sqlbench.schema.spec import load_schema
 from sqlbench.settings import MissingEnvError
-from sqlbench.warehouses.base import Warehouse, WarehouseName
+from sqlbench.warehouses.base import SessionContext, Warehouse, WarehouseName
 from sqlbench.warehouses.databricks_warehouse import DatabricksWarehouse
 from sqlbench.warehouses.duckdb_warehouse import DuckDBWarehouse
 from sqlbench.warehouses.snowflake_warehouse import SnowflakeWarehouse
 
 PING_TIMEOUT_S = 60
+CHECK_TIMEOUT_S = 120
 SCHEMAS_DIR = Path("schemas")
 DATA_DIR = Path("data")
 MANIFESTS_DIR = Path("manifests")
@@ -42,12 +45,18 @@ def main() -> None:
     load_dotenv()
 
 
-def open_warehouse(name: WarehouseName) -> Warehouse:
+def open_warehouse(
+    name: WarehouseName, context: SessionContext | None = None, data_dir: Path = DATA_DIR
+) -> Warehouse:
+    """A read-only query adapter. DuckDB with a context reads the loaded local file."""
     if name == WarehouseName.SNOWFLAKE:
-        return SnowflakeWarehouse()
+        return SnowflakeWarehouse(context)
     if name == WarehouseName.DATABRICKS:
-        return DatabricksWarehouse()
-    return DuckDBWarehouse()
+        return DatabricksWarehouse(context)
+    if context is None:
+        return DuckDBWarehouse()
+    connection = duckdb.connect(str(data_dir / DUCKDB_FILE_NAME), read_only=True)
+    return DuckDBWarehouse(connection, context)
 
 
 @app.command()
@@ -95,6 +104,18 @@ def chosen_profiles(profile: LoadProfile) -> list[Profile]:
     if profile == LoadProfile.BOTH:
         return [Profile.MAIN, Profile.EDGE]
     return [Profile(profile.value)]
+
+
+def confirm_cost(
+    warehouse: WarehouseName, paths: list[Path], profiles: list[Profile], yes: bool, prompt: str
+) -> None:
+    """Print a cost estimate for warehouse work and stop unless confirmed."""
+    if warehouse == WarehouseName.DUCKDB:
+        return
+    table_count = len(profiles) * sum(len(load_schema(path).tables) for path in paths)
+    typer.echo(f"Estimated cost: {cost_estimate(warehouse, table_count)}")
+    if not yes and not typer.confirm(prompt):
+        raise typer.Exit(code=1)
 
 
 def open_loader(warehouse: WarehouseName, data_dir: Path) -> Loader:
@@ -170,11 +191,7 @@ def load_data(
     """Replace the warehouse copy of each dataset with the generated files. Safe to rerun."""
     paths = chosen_schema_paths(schemas_dir, schema, all_schemas)
     profiles = chosen_profiles(profile)
-    if warehouse != WarehouseName.DUCKDB:
-        table_count = len(profiles) * sum(len(load_schema(path).tables) for path in paths)
-        typer.echo(f"Estimated cost: {load_cost_estimate(warehouse, table_count)}")
-        if not yes and not typer.confirm("Load now?"):
-            raise typer.Exit(code=1)
+    confirm_cost(warehouse, paths, profiles, yes, "Load now?")
 
     try:
         loader = open_loader(warehouse, data_dir)
@@ -191,3 +208,43 @@ def load_data(
         raise typer.Exit(code=1) from error
     finally:
         loader.close()
+
+
+@data_app.command("check")
+def check_data(
+    warehouse: Annotated[WarehouseName, typer.Option("--warehouse", "-w")],
+    profile: Annotated[LoadProfile, typer.Option()] = LoadProfile.BOTH,
+    schema: Annotated[str | None, typer.Option(help="Schema to check.")] = None,
+    all_schemas: Annotated[bool, typer.Option("--all", help="Check every schema.")] = False,
+    yes: Annotated[bool, typer.Option("--yes", help="Skip the cost confirmation.")] = False,
+    schemas_dir: Annotated[Path, typer.Option("--dir")] = SCHEMAS_DIR,
+    data_dir: Annotated[Path, typer.Option()] = DATA_DIR,
+    manifest_dir: Annotated[Path, typer.Option()] = MANIFESTS_DIR,
+) -> None:
+    """Compare loaded row counts and column aggregates with the manifests."""
+    paths = chosen_schema_paths(schemas_dir, schema, all_schemas)
+    profiles = chosen_profiles(profile)
+    confirm_cost(warehouse, paths, profiles, yes, "Run the checks?")
+
+    failed = False
+    for path in paths:
+        spec = load_schema(path)
+        for each_profile in profiles:
+            manifest = read_manifest(manifest_dir, spec.name, each_profile)
+            adapter = open_warehouse(warehouse, session_context(spec.name, each_profile), data_dir)
+            try:
+                problems = check_dataset(adapter, spec, manifest, CHECK_TIMEOUT_S)
+            except MissingEnvError as error:
+                typer.echo(f"{warehouse}: {error}", err=True)
+                raise typer.Exit(code=1) from error
+            finally:
+                adapter.close()
+            if problems:
+                failed = True
+                typer.echo(f"{spec.name} ({each_profile}): {len(problems)} differences", err=True)
+                for problem in problems:
+                    typer.echo(f"  {problem}", err=True)
+            else:
+                typer.echo(f"{spec.name} ({each_profile}): matches the manifest")
+    if failed:
+        raise typer.Exit(code=1)
