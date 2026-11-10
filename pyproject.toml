@@ -25,6 +25,7 @@ bench = "sqlbench.cli:app"
 
 [dependency-groups]
 dev = [
+    "hypothesis>=6.170.15",
     "mypy>=1.11",
     "pytest>=8.0",
     "ruff>=0.6",
