@@ -60,9 +60,11 @@ def connect_from_env(context: SessionContext) -> DatabricksConnection:
 
     def credentials_provider() -> OAuthCredentialsProvider:
         # Built only when the connector asks for credentials: creating the
-        # Config already contacts the workspace's OAuth endpoint.
+        # Config already contacts the workspace's OAuth endpoint. auth_type
+        # stops the SDK from also picking up the owner's DATABRICKS_TOKEN.
         config = Config(
             host=f"https://{env['DATABRICKS_SERVER_HOSTNAME']}",
+            auth_type="oauth-m2m",
             client_id=env["DATABRICKS_READER_CLIENT_ID"],
             client_secret=env["DATABRICKS_READER_CLIENT_SECRET"],
         )
