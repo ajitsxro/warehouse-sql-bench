@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from sqlbench.datagen.generator import generate_dataset
 from sqlbench.datagen.tables import Profile
 from sqlbench.load.cost import load_cost_estimate
+from sqlbench.load.databricks_loader import DatabricksLoader
 from sqlbench.load.dataset import Loader, LoadError, load_dataset
 from sqlbench.load.duckdb_loader import DuckDBLoader
 from sqlbench.load.snowflake_loader import SnowflakeLoader
@@ -101,7 +102,7 @@ def open_loader(warehouse: WarehouseName, data_dir: Path) -> Loader:
         return DuckDBLoader(data_dir / DUCKDB_FILE_NAME)
     if warehouse == WarehouseName.SNOWFLAKE:
         return SnowflakeLoader()
-    raise typer.BadParameter(f"no loader for {warehouse} yet")
+    return DatabricksLoader(data_dir)
 
 
 @schema_app.command("validate")
