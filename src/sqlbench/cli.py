@@ -1,5 +1,7 @@
 """Command-line entry point for the benchmark."""
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
@@ -12,13 +14,14 @@ from dotenv import load_dotenv
 from sqlbench.datagen.generator import generate_dataset
 from sqlbench.datagen.tables import Profile
 from sqlbench.load.check import check_dataset
-from sqlbench.load.cost import cost_estimate
+from sqlbench.load.cost import cost_estimate, query_cost_estimate
 from sqlbench.load.databricks_loader import DatabricksLoader
 from sqlbench.load.dataset import Loader, LoadError, load_dataset, read_manifest, session_context
 from sqlbench.load.duckdb_loader import DuckDBLoader
 from sqlbench.load.snowflake_loader import SnowflakeLoader
+from sqlbench.questions.check import GOLD_WAREHOUSES, PROFILES, GoldTargets, check_question
 from sqlbench.questions.lint import lint_files
-from sqlbench.questions.model import question_paths
+from sqlbench.questions.model import Question, Status, load_question, question_paths
 from sqlbench.schema.spec import load_schema
 from sqlbench.settings import MissingEnvError
 from sqlbench.warehouses.base import SessionContext, Warehouse, WarehouseName
@@ -255,6 +258,43 @@ def check_data(
         raise typer.Exit(code=1)
 
 
+def lint_and_load(paths: list[Path], schemas_dir: Path) -> tuple[list[tuple[Path, Question]], int]:
+    """Questions that pass lint, after printing the problems of those that don't."""
+    clean: list[tuple[Path, Question]] = []
+    failed_count = 0
+    for path, found in lint_files(paths, schemas_dir).items():
+        if not found:
+            clean.append((path, load_question(path)))
+            continue
+        failed_count += 1
+        typer.echo(f"{path}:", err=True)
+        for problem in found:
+            typer.echo(f"  {problem}", err=True)
+    return clean, failed_count
+
+
+def confirm_query_cost(question_count: int, yes: bool) -> None:
+    """Each question runs its gold twice (main and edge) on each warehouse."""
+    for warehouse in GOLD_WAREHOUSES:
+        typer.echo(f"Estimated cost: {query_cost_estimate(warehouse, 2 * question_count)}")
+    if not yes and not typer.confirm("Run the gold queries?"):
+        raise typer.Exit(code=1)
+
+
+@contextmanager
+def gold_targets(schema_name: str) -> Iterator[GoldTargets]:
+    targets: GoldTargets = {}
+    try:
+        for warehouse in GOLD_WAREHOUSES:
+            for profile in PROFILES:
+                context = session_context(schema_name, profile)
+                targets[(warehouse, profile)] = open_warehouse(warehouse, context)
+        yield targets
+    finally:
+        for target in targets.values():
+            target.close()
+
+
 @questions_app.command("lint")
 def lint_questions(
     schema: Annotated[str | None, typer.Option(help="One schema's questions; default is all.")] = (
@@ -265,15 +305,43 @@ def lint_questions(
 ) -> None:
     """Check question files without running anything on a warehouse."""
     paths = question_paths(questions_dir, schema)
-    problems = lint_files(paths, schemas_dir)
-    failed_count = 0
-    for path, found in problems.items():
-        if not found:
-            continue
-        failed_count += 1
-        typer.echo(f"{path}:", err=True)
-        for problem in found:
-            typer.echo(f"  {problem}", err=True)
+    _, failed_count = lint_and_load(paths, schemas_dir)
     typer.echo(f"{len(paths)} questions, {failed_count} with problems")
+    if failed_count:
+        raise typer.Exit(code=1)
+
+
+@questions_app.command("check")
+def check_questions(
+    schema: Annotated[str, typer.Option(help="Schema whose questions to check.")],
+    yes: Annotated[bool, typer.Option("--yes", help="Skip the cost confirmation.")] = False,
+    questions_dir: Annotated[Path, typer.Option("--dir")] = QUESTIONS_DIR,
+    schemas_dir: Annotated[Path, typer.Option("--schemas-dir")] = SCHEMAS_DIR,
+) -> None:
+    """Run both golds on both warehouses and both datasets; their results must agree.
+
+    Questions that fail lint or are rejected are not run.
+    """
+    clean, failed_count = lint_and_load(question_paths(questions_dir, schema), schemas_dir)
+    to_run = [(path, question) for path, question in clean if question.status != Status.REJECTED]
+    if not to_run:
+        typer.echo("no questions to run")
+        raise typer.Exit(code=1 if failed_count else 0)
+    confirm_query_cost(len(to_run), yes)
+
+    with gold_targets(schema) as targets:
+        for _, question in to_run:
+            try:
+                check = check_question(question, targets)
+            except MissingEnvError as error:
+                typer.echo(str(error), err=True)
+                raise typer.Exit(code=1) from error
+            if check.passed:
+                typer.echo(f"{question.id}: ok")
+                continue
+            failed_count += 1
+            typer.echo(f"{question.id}: failed", err=True)
+            for failure in check.failures:
+                typer.echo(f"  {failure}", err=True)
     if failed_count:
         raise typer.Exit(code=1)
