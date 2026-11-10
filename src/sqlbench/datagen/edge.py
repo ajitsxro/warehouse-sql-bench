@@ -5,6 +5,8 @@ Each injector edits the generated tables in place and returns the tables where
 its case is now guaranteed to exist. Injectors never touch primary keys, only
 set a foreign key to another existing parent or to NULL where allowed, and
 only duplicate rows in tables without a primary key, so integrity holds.
+Series times and ends are left alone, so each key's series stays in order and
+history rows stay contiguous.
 """
 
 import datetime
@@ -67,13 +69,26 @@ def is_key(table: TableSpec, column: ColumnSpec) -> bool:
     return column.name == table.primary_key or column.references is not None
 
 
+def is_series_time(table: TableSpec, column: ColumnSpec) -> bool:
+    series = table.series
+    return series is not None and column.name in (series.time, series.end)
+
+
+def keep_rows(table: TableData, rows: list[int]) -> None:
+    for name, values in table.columns.items():
+        table.columns[name] = [values[index] for index in rows]
+
+
 def rankable_columns(table: TableSpec) -> list[ColumnSpec]:
     """Numeric measures and timestamps, the columns top-N questions sort by."""
     rankable_kinds = NUMERIC_KINDS | {TypeKind.TIMESTAMP_NTZ, TypeKind.TIMESTAMP_TZ}
     columns: list[ColumnSpec] = []
     for column in table.columns:
-        if column.logical_type.kind in rankable_kinds and not is_key(table, column):
-            columns.append(column)
+        if column.logical_type.kind not in rankable_kinds:
+            continue
+        if is_key(table, column) or is_series_time(table, column):
+            continue
+        columns.append(column)
     return columns
 
 
@@ -120,7 +135,14 @@ def inject_empty_groups(schema: SchemaSpec, tables: Tables, rng: random.Random) 
         reserved = set(rng.sample(keys, max(1, int(len(keys) * EMPTY_GROUP_SHARE))))
         allowed = [key for key in keys if key not in reserved]
         for child_name, column_name in children:
-            values = tables[child_name].columns[column_name]
+            child_data = tables[child_name]
+            values = child_data.columns[column_name]
+            series = child_data.spec.series
+            if series is not None and series.key == column_name:
+                # Moving a series to another key would interleave two series, so drop it.
+                kept = [index for index, value in enumerate(values) if value not in reserved]
+                keep_rows(child_data, kept)
+                continue
             for index, value in enumerate(values):
                 if value in reserved:
                     values[index] = rng.choice(allowed)
@@ -133,7 +155,10 @@ def inject_nulls(schema: SchemaSpec, tables: Tables, rng: random.Random) -> list
     changed: list[str] = []
     for table in schema.tables:
         data = tables[table.name]
-        nullable = [column for column in table.columns if column.nullable]
+        nullable: list[ColumnSpec] = []
+        for column in table.columns:
+            if column.nullable and not is_series_time(table, column):
+                nullable.append(column)
         for column in nullable:
             values = data.columns[column.name]
             wanted = max(1, int(len(values) * NULL_SHARE)) - values.count(None)
@@ -153,7 +178,7 @@ def inject_boundary_dates(schema: SchemaSpec, tables: Tables, rng: random.Random
         touched = False
         for column in table.columns:
             # Columns placed after an anchor follow it; repair_after_order keeps them valid.
-            if column.gen.after is not None:
+            if column.gen.after is not None or is_series_time(table, column):
                 continue
             boundaries = boundary_values(column.logical_type.kind)
             values = data.columns[column.name]

@@ -1,6 +1,6 @@
-# Small schema for hierarchies, sized for fast tests.
+# Small schema for hierarchies and series tables, sized for fast tests.
 name: mini_org
-description: Departments and employees with a manager hierarchy.
+description: Employees with a manager hierarchy, salary history and badge scans.
 tables:
   - name: departments
     rows: 5
@@ -27,3 +27,24 @@ tables:
         references: departments.department_id
         gen: {distribution: zipf}
       - {name: hired_on, type: date, gen: {min: 2015-01-01, max: 2024-12-31}}
+
+  - name: salary_history
+    rows: 1500
+    edge_rows: 400
+    primary_key: history_id
+    series: {key: employee_id, time: valid_from, end: valid_to, step: 365d, gap_rate: 0.3}
+    columns:
+      - {name: history_id, type: bigint, gen: {distribution: sequence}}
+      - {name: employee_id, type: bigint, references: employees.employee_id}
+      - {name: valid_from, type: date, gen: {min: 2023-01-01, max: 2024-12-31}}
+      - {name: valid_to, type: date, nullable: true}
+      - {name: salary, type: "decimal(12,2)", gen: {min: 40000, max: 250000}}
+
+  - name: badge_scans
+    rows: 2000
+    edge_rows: 500
+    series: {key: employee_id, time: scanned_at, step: 1h, gap_rate: 0.1, max_gap_steps: 5}
+    columns:
+      - {name: employee_id, type: bigint, references: employees.employee_id}
+      - {name: scanned_at, type: timestamp_tz, gen: {min: 2024-03-01, max: 2024-03-31}}
+      - {name: door, type: string, gen: {values: [north, south, garage]}}

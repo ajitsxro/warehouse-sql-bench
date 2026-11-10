@@ -16,7 +16,7 @@ from typing import Any
 import numpy as np
 from faker import Faker
 
-from sqlbench.schema.spec import ColumnSpec, GenSpec, JsonShape
+from sqlbench.schema.spec import ColumnSpec, GenSpec, JsonShape, TableSpec
 from sqlbench.schema.types import INTEGER_KINDS, NUMERIC_KINDS, LogicalType, TypeKind
 
 FAKER_LOCALE = "en_US"
@@ -100,6 +100,48 @@ def generate_self_references(column: ColumnSpec, keys: list[Any], seed: int) -> 
         candidates = max(1, index // SPAN_OF_CONTROL)
         parents.append(keys[int(draws[index] * candidates)])
     return apply_null_rate(parents, column.gen.null_rate, rng)
+
+
+def generate_series(table: TableSpec, keys: list[Any], seed: int) -> dict[str, list[Any]]:
+    """Sorted keys, their stepped times, and the end column if the series has one.
+
+    keys are the already drawn foreign keys, so their skew decides how long each
+    key's series is. Times step back from a last time drawn per key.
+    """
+    series = table.series
+    assert series is not None
+    time_column = table.column(series.time)
+    rng = np.random.default_rng(seed)
+
+    sorted_keys = sorted(keys)
+    distinct_keys = sorted(set(keys))
+    kind = time_column.logical_type.kind
+    last_times = draw_temporal(time_column.gen, kind, len(distinct_keys), rng)
+    is_gap = rng.random(len(keys)) < series.gap_rate
+    gap_steps = rng.integers(1, series.max_gap_steps + 1, len(keys))
+    step = datetime.timedelta(minutes=series.step_minutes)
+
+    rows_per_key: dict[Any, int] = {}
+    for key in sorted_keys:
+        rows_per_key[key] = rows_per_key.get(key, 0) + 1
+
+    times: list[Any] = []
+    ends: list[Any] = []
+    row = 0
+    for key_index, key in enumerate(distinct_keys):
+        key_times = [last_times[key_index]]
+        for _ in range(rows_per_key[key] - 1):
+            steps = 1 + int(gap_steps[row]) if is_gap[row] else 1
+            key_times.append(key_times[-1] - steps * step)
+            row += 1
+        key_times.reverse()
+        times.extend(key_times)
+        ends.extend(key_times[1:] + [None])
+
+    generated = {series.key: sorted_keys, series.time: times}
+    if series.end is not None:
+        generated[series.end] = ends
+    return generated
 
 
 def apply_null_rate(values: list[Any], null_rate: float, rng: np.random.Generator) -> list[Any]:
