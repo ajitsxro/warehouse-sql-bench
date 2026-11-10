@@ -192,6 +192,18 @@ def test_openai_status_errors_are_classified(status: int, retryable: bool) -> No
     assert raised.value.retryable is retryable
 
 
+def test_openai_out_of_credit_is_not_retried() -> None:
+    response = httpx2.Response(429, request=REQUEST)
+    body = {"message": "You have no credits remaining.", "code": "insufficient_quota"}
+    error = openai.APIStatusError("no credits", response=response, body=body)
+    client = OpenAICompatibleClient(config(Provider.OPENAI), openai_sdk(Recorder(error=error)))
+
+    with pytest.raises(ProviderError) as raised:
+        client.complete("p")
+
+    assert raised.value.retryable is False
+
+
 # ---------------- Gemini ----------------
 
 
@@ -230,6 +242,24 @@ def test_gemini_blocked_response_has_empty_text() -> None:
 def test_gemini_api_errors_are_classified(status: int, retryable: bool) -> None:
     error = genai_errors.APIError(status, {"error": {"message": "failed", "status": "X"}})
     client = GeminiClient(config(Provider.GOOGLE), gemini_sdk(Recorder(error=error)))
+
+    with pytest.raises(ProviderError) as raised:
+        client.complete("p")
+
+    assert raised.value.retryable is retryable
+
+
+def gemini_quota_error(delay: str) -> genai_errors.APIError:
+    retry_info = {"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": delay}
+    body = {"error": {"code": 429, "status": "RESOURCE_EXHAUSTED", "details": [retry_info]}}
+    return genai_errors.APIError(429, body)
+
+
+@pytest.mark.parametrize(("delay", "retryable"), [("31256s", False), ("20s", True), ("x", True)])
+def test_gemini_long_waits_mean_out_of_quota(delay: str, retryable: bool) -> None:
+    client = GeminiClient(
+        config(Provider.GOOGLE), gemini_sdk(Recorder(error=gemini_quota_error(delay)))
+    )
 
     with pytest.raises(ProviderError) as raised:
         client.complete("p")
