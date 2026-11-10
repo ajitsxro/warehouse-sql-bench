@@ -1,0 +1,30 @@
+{
+  "schema_name": "hr_people",
+  "profile": "main",
+  "seed": 20261105,
+  "generator_version": 1,
+  "spec_sha256": "be791972abe049419ccb5499eea1c679c29a7083aaa83e1cebb4eb42539f2635",
+  "pyarrow_version": "26.0.0",
+  "tables": {
+    "departments": {
+      "rows": 12,
+      "sha256": "e187e68be92e8321e3ccf1b0ae527435543e038b52edbedccd8ffd4833ec59c5",
+      "injectors": []
+    },
+    "employees": {
+      "rows": 100000,
+      "sha256": "0a2d38687548d67e0ee8b0b4624b445dbb6a15513450ff582330bc2282ba4675",
+      "injectors": []
+    },
+    "compensation_history": {
+      "rows": 450000,
+      "sha256": "3816ca3d058c949afbdeb0fd88e3c9263c08105a75cdd61393cc3ef12944ea19",
+      "injectors": []
+    },
+    "reviews": {
+      "rows": 250000,
+      "sha256": "d71f53fbe5bde3ed8d56650fd2996c018f4b824daf724e031dd1a19b804cf132",
+      "injectors": []
+    }
+  }
+}

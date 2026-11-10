@@ -1,0 +1,49 @@
+{
+  "schema_name": "hr_people",
+  "profile": "edge",
+  "seed": 20261105,
+  "generator_version": 1,
+  "spec_sha256": "be791972abe049419ccb5499eea1c679c29a7083aaa83e1cebb4eb42539f2635",
+  "pyarrow_version": "26.0.0",
+  "tables": {
+    "departments": {
+      "rows": 12,
+      "sha256": "654d7bc93dcb47ea731fc4db8f7d98b72ef453244a6fd1c415e157c88a1790fd",
+      "injectors": [
+        "empty_groups",
+        "messy_strings"
+      ]
+    },
+    "employees": {
+      "rows": 400,
+      "sha256": "0b01e2906923e9104a3b8e4a2df8e7d14a936f98f6c2fe728ae620a689ee8302",
+      "injectors": [
+        "empty_groups",
+        "nulls",
+        "boundary_dates",
+        "semi_structured",
+        "messy_strings"
+      ]
+    },
+    "compensation_history": {
+      "rows": 1912,
+      "sha256": "d8323e6556eb65228749821e52ad70e21b74f6035b6d7ac33961f044b9f53f00",
+      "injectors": [
+        "nulls",
+        "messy_strings",
+        "ties"
+      ]
+    },
+    "reviews": {
+      "rows": 1500,
+      "sha256": "c1e24af975eb286d1eb623d1ae504465a5b4d70d5395e2dc8111e667bf7e839a",
+      "injectors": [
+        "nulls",
+        "boundary_dates",
+        "semi_structured",
+        "messy_strings",
+        "ties"
+      ]
+    }
+  }
+}
