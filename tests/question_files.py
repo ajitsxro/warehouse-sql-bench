@@ -7,7 +7,7 @@ import yaml
 
 from sqlbench.datagen.tables import Profile
 from sqlbench.questions.check import GoldTargets
-from sqlbench.warehouses.base import QueryError, QueryResult, WarehouseName
+from sqlbench.warehouses.base import Column, QueryError, QueryResult, WarehouseName
 
 Rows = list[tuple[Any, ...]]
 
@@ -57,7 +57,9 @@ class FakeWarehouse:
         self.queries.append(sql)
         if self.error is not None:
             return QueryResult(elapsed_ms=1.0, error=self.error)
-        return QueryResult(elapsed_ms=1.0, rows=self.rows)
+        width = len(self.rows[0]) if self.rows else 1
+        columns = [Column(f"c{index}", "TEXT") for index in range(width)]
+        return QueryResult(elapsed_ms=1.0, columns=columns, rows=self.rows)
 
     def close(self) -> None:
         self.closed = True
