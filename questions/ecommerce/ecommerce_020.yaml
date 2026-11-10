@@ -1,0 +1,23 @@
+id: ecommerce_020
+schema: ecommerce
+question: >-
+  How many products are tagged 'sale'?
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  ARRAY_CONTAINS takes (value, array) on Snowflake, with the value as a
+  VARIANT, and (array, value) on Databricks.
+features: [array_fn, aggregate]
+difficulty: easy
+gold_sql:
+  snowflake: |
+    SELECT COUNT(*) AS products
+    FROM products
+    WHERE ARRAY_CONTAINS('sale'::VARIANT, tags)
+  databricks: |
+    SELECT COUNT(*) AS products
+    FROM products
+    WHERE array_contains(tags, 'sale')
+order_matters: false
+float_tolerance: 0
+status: draft

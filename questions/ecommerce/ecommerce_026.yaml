@@ -1,0 +1,39 @@
+id: ecommerce_026
+schema: ecommerce
+question: >-
+  How many orders placed in 2024 (UTC) have a cart total above 500, where the
+  cart total is the sum of qty times unit_price over the lines of
+  attributes.items?
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  Expanding a JSON array into rows: LATERAL FLATTEN on Snowflake,
+  variant_explode on Databricks.
+features: [flatten_explode, semi_structured_path, aggregate, having, subquery]
+difficulty: hard
+gold_sql:
+  snowflake: |
+    SELECT COUNT(*) AS orders
+    FROM (
+        SELECT o.order_id
+        FROM orders AS o,
+             LATERAL FLATTEN(input => o.attributes:items) AS f
+        WHERE o.placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND o.placed_at < TIMESTAMP '2025-01-01 00:00:00'
+        GROUP BY o.order_id
+        HAVING SUM(f.value:qty::INT * f.value:unit_price::NUMBER(10,2)) > 500
+    ) AS large_carts
+  databricks: |
+    SELECT COUNT(*) AS orders
+    FROM (
+        SELECT o.order_id
+        FROM orders AS o,
+             LATERAL variant_explode(o.attributes:items) AS f
+        WHERE o.placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND o.placed_at < TIMESTAMP '2025-01-01 00:00:00'
+        GROUP BY o.order_id
+        HAVING SUM(f.value:qty::INT * f.value:unit_price::DECIMAL(10,2)) > 500
+    ) AS large_carts
+order_matters: false
+float_tolerance: 0
+status: draft

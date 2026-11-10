@@ -1,0 +1,58 @@
+id: ecommerce_009
+schema: ecommerce
+question: >-
+  For each customer country (trimmed, upper-cased), which customer has the
+  highest lifetime item revenue (quantity times unit_price minus
+  discount_amount, a missing discount meaning none, over all their orders)?
+  Break ties by the lower customer_id. Customers without any order items are
+  not considered. Return the country, customer_id and revenue.
+category: portable
+divergence: none
+features: [cte, join, aggregate, window]
+difficulty: hard
+gold_sql:
+  snowflake: |
+    WITH revenue AS (
+        SELECT o.customer_id, SUM(oi.quantity * oi.unit_price - COALESCE(oi.discount_amount, 0)) AS revenue
+        FROM orders AS o
+        JOIN order_items AS oi ON oi.order_id = o.order_id
+        GROUP BY o.customer_id
+    ),
+    ranked AS (
+        SELECT UPPER(TRIM(c.country)) AS country,
+               c.customer_id,
+               r.revenue,
+               ROW_NUMBER() OVER (
+                   PARTITION BY UPPER(TRIM(c.country))
+                   ORDER BY r.revenue DESC, c.customer_id
+               ) AS position
+        FROM revenue AS r
+        JOIN customers AS c ON c.customer_id = r.customer_id
+    )
+    SELECT country, customer_id, revenue
+    FROM ranked
+    WHERE position = 1
+  databricks: |
+    WITH revenue AS (
+        SELECT o.customer_id, SUM(oi.quantity * oi.unit_price - COALESCE(oi.discount_amount, 0)) AS revenue
+        FROM orders AS o
+        JOIN order_items AS oi ON oi.order_id = o.order_id
+        GROUP BY o.customer_id
+    ),
+    ranked AS (
+        SELECT UPPER(TRIM(c.country)) AS country,
+               c.customer_id,
+               r.revenue,
+               ROW_NUMBER() OVER (
+                   PARTITION BY UPPER(TRIM(c.country))
+                   ORDER BY r.revenue DESC, c.customer_id
+               ) AS position
+        FROM revenue AS r
+        JOIN customers AS c ON c.customer_id = r.customer_id
+    )
+    SELECT country, customer_id, revenue
+    FROM ranked
+    WHERE position = 1
+order_matters: false
+float_tolerance: 0
+status: draft

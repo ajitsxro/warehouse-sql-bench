@@ -1,0 +1,30 @@
+id: ecommerce_032
+schema: ecommerce
+question: >-
+  For orders placed in 2024 (UTC) that have shipped, what is the average
+  number of days from order to shipment? Count days as the difference between
+  the ship date and the order date (calendar dates in UTC), so an order placed
+  at 23:00 and shipped at 01:00 the next day took 1 day.
+category: dialect_sensitive
+divergence: semantics
+divergence_note: >-
+  DATEDIFF(day, ts1, ts2) counts midnight boundaries on Snowflake but whole
+  24-hour periods on Databricks (probe datediff_day_ts).
+features: [date_math, aggregate, null_handling]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT AVG(DATEDIFF(day, o.placed_at, o.shipped_at)) AS avg_days_to_ship
+    FROM orders AS o
+    WHERE o.placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND o.placed_at < TIMESTAMP '2025-01-01 00:00:00'
+      AND o.shipped_at IS NOT NULL
+  databricks: |
+    SELECT AVG(DATEDIFF(CAST(o.shipped_at AS DATE), CAST(o.placed_at AS DATE))) AS avg_days_to_ship
+    FROM orders AS o
+    WHERE o.placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND o.placed_at < TIMESTAMP '2025-01-01 00:00:00'
+      AND o.shipped_at IS NOT NULL
+order_matters: false
+float_tolerance: 1e-06
+status: draft

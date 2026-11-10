@@ -1,0 +1,24 @@
+id: ecommerce_028
+schema: ecommerce
+question: >-
+  How many products have 0, 1, 2 or 3 entries in their specs? Return the
+  number of entries and the number of products.
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  Size of a map: ARRAY_SIZE(OBJECT_KEYS(...)) on Snowflake, size(...) on
+  Databricks.
+features: [struct_map_access, aggregate]
+difficulty: easy
+gold_sql:
+  snowflake: |
+    SELECT ARRAY_SIZE(OBJECT_KEYS(specs)) AS spec_entries, COUNT(*) AS products
+    FROM products
+    GROUP BY ARRAY_SIZE(OBJECT_KEYS(specs))
+  databricks: |
+    SELECT size(specs) AS spec_entries, COUNT(*) AS products
+    FROM products
+    GROUP BY size(specs)
+order_matters: false
+float_tolerance: 0
+status: draft

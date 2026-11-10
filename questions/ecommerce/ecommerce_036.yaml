@@ -1,0 +1,23 @@
+id: ecommerce_036
+schema: ecommerce
+question: >-
+  How many orders have a checkout payload (attributes)? A payload stored as a
+  JSON null counts as missing, the same as no payload at all.
+category: dialect_sensitive
+divergence: semantics
+divergence_note: >-
+  COUNT over a VARIANT skips JSON null on Snowflake but counts it on
+  Databricks (probes count_variant_jsonnull, count_attributes_edge).
+features: [semi_structured_path, null_handling, aggregate]
+difficulty: easy
+gold_sql:
+  snowflake: |
+    SELECT COUNT(attributes) AS orders_with_payload
+    FROM orders
+  databricks: |
+    SELECT SUM(CASE WHEN attributes IS NOT NULL AND NOT is_variant_null(attributes)
+                    THEN 1 ELSE 0 END) AS orders_with_payload
+    FROM orders
+order_matters: false
+float_tolerance: 0
+status: draft

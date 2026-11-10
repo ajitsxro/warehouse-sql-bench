@@ -1,0 +1,49 @@
+id: ecommerce_015
+schema: ecommerce
+question: >-
+  For each month of 2024 (UTC) with at least one order, report the first day
+  of the month, the number of orders, and the change from the previous
+  calendar month's count (a previous month without orders counts as 0; January
+  compares with December 2023). Sort by month.
+category: portable
+divergence: none
+features: [cte, join, aggregate, date_math, null_handling]
+difficulty: hard
+gold_sql:
+  snowflake: |
+    WITH monthly AS (
+        SELECT CAST(DATE_TRUNC('month', placed_at) AS DATE) AS month_start,
+               COUNT(*) AS orders
+        FROM orders
+        WHERE placed_at >= TIMESTAMP '2023-12-01 00:00:00'
+          AND placed_at < TIMESTAMP '2025-01-01 00:00:00'
+        GROUP BY CAST(DATE_TRUNC('month', placed_at) AS DATE)
+    )
+    SELECT m.month_start,
+           m.orders,
+           m.orders - COALESCE(previous.orders, 0) AS change
+    FROM monthly AS m
+    LEFT JOIN monthly AS previous
+      ON previous.month_start = ADD_MONTHS(m.month_start, -1)
+    WHERE m.month_start >= DATE '2024-01-01'
+    ORDER BY m.month_start
+  databricks: |
+    WITH monthly AS (
+        SELECT CAST(DATE_TRUNC('month', placed_at) AS DATE) AS month_start,
+               COUNT(*) AS orders
+        FROM orders
+        WHERE placed_at >= TIMESTAMP '2023-12-01 00:00:00'
+          AND placed_at < TIMESTAMP '2025-01-01 00:00:00'
+        GROUP BY CAST(DATE_TRUNC('month', placed_at) AS DATE)
+    )
+    SELECT m.month_start,
+           m.orders,
+           m.orders - COALESCE(previous.orders, 0) AS change
+    FROM monthly AS m
+    LEFT JOIN monthly AS previous
+      ON previous.month_start = ADD_MONTHS(m.month_start, -1)
+    WHERE m.month_start >= DATE '2024-01-01'
+    ORDER BY m.month_start
+order_matters: true
+float_tolerance: 0
+status: draft

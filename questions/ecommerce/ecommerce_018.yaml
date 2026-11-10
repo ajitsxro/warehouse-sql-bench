@@ -1,0 +1,28 @@
+id: ecommerce_018
+schema: ecommerce
+question: >-
+  Order times are stored in UTC. For orders placed in 2024 (UTC), how many
+  fall in each hour of the day in New York local time (America/New_York)?
+  Return the local hour (0-23) and the number of orders.
+category: portable
+divergence: none
+features: [timezone, date_math, aggregate]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT HOUR(CONVERT_TIMEZONE('UTC', 'America/New_York', o.placed_at)) AS local_hour,
+           COUNT(*) AS orders
+    FROM orders AS o
+    WHERE o.placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND o.placed_at < TIMESTAMP '2025-01-01 00:00:00'
+    GROUP BY HOUR(CONVERT_TIMEZONE('UTC', 'America/New_York', o.placed_at))
+  databricks: |
+    SELECT HOUR(CONVERT_TIMEZONE('UTC', 'America/New_York', o.placed_at)) AS local_hour,
+           COUNT(*) AS orders
+    FROM orders AS o
+    WHERE o.placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND o.placed_at < TIMESTAMP '2025-01-01 00:00:00'
+    GROUP BY HOUR(CONVERT_TIMEZONE('UTC', 'America/New_York', o.placed_at))
+order_matters: false
+float_tolerance: 0
+status: draft

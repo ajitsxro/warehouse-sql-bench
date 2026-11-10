@@ -1,0 +1,58 @@
+id: ecommerce_033
+schema: ecommerce
+question: >-
+  For each customer with at least one order, their latest activity is the
+  later of their most recent order time (placed_at) and their most recent
+  return request time (requested_at) on any of their order items; customers
+  with no returns use their most recent order time. All times are UTC. How
+  many customers have their latest activity in each calendar year?
+category: dialect_sensitive
+divergence: semantics
+divergence_note: >-
+  GREATEST returns NULL when any argument is NULL on Snowflake but ignores
+  NULLs on Databricks, so GREATEST(last_order, last_return) drops customers
+  without returns on Snowflake (probe greatest_null).
+features: [cte, join, aggregate, null_handling, date_math]
+difficulty: hard
+gold_sql:
+  snowflake: |
+    WITH last_order AS (
+        SELECT customer_id, MAX(placed_at) AS last_order_at
+        FROM orders
+        GROUP BY customer_id
+    ),
+    last_return AS (
+        SELECT o.customer_id,
+               MAX(CAST(r.requested_at AS TIMESTAMP_NTZ)) AS last_return_at
+        FROM returns AS r
+        JOIN order_items AS oi ON oi.order_item_id = r.order_item_id
+        JOIN orders AS o ON o.order_id = oi.order_id
+        GROUP BY o.customer_id
+    )
+    SELECT YEAR(GREATEST(lo.last_order_at, COALESCE(lr.last_return_at, lo.last_order_at))) AS activity_year,
+           COUNT(*) AS customers
+    FROM last_order AS lo
+    LEFT JOIN last_return AS lr ON lr.customer_id = lo.customer_id
+    GROUP BY YEAR(GREATEST(lo.last_order_at, COALESCE(lr.last_return_at, lo.last_order_at)))
+  databricks: |
+    WITH last_order AS (
+        SELECT customer_id, MAX(placed_at) AS last_order_at
+        FROM orders
+        GROUP BY customer_id
+    ),
+    last_return AS (
+        SELECT o.customer_id,
+               MAX(CAST(r.requested_at AS TIMESTAMP_NTZ)) AS last_return_at
+        FROM returns AS r
+        JOIN order_items AS oi ON oi.order_item_id = r.order_item_id
+        JOIN orders AS o ON o.order_id = oi.order_id
+        GROUP BY o.customer_id
+    )
+    SELECT YEAR(GREATEST(lo.last_order_at, lr.last_return_at)) AS activity_year,
+           COUNT(*) AS customers
+    FROM last_order AS lo
+    LEFT JOIN last_return AS lr ON lr.customer_id = lo.customer_id
+    GROUP BY YEAR(GREATEST(lo.last_order_at, lr.last_return_at))
+order_matters: false
+float_tolerance: 0
+status: draft

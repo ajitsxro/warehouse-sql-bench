@@ -1,0 +1,39 @@
+id: ecommerce_011
+schema: ecommerce
+question: >-
+  For each product category (trimmed, lower-cased), what share of order items
+  has at least one return? Return the category, the number of order items, the
+  number of those items with a return, and the share as a fraction between 0
+  and 1.
+category: portable
+divergence: none
+features: [cte, join, aggregate, null_handling, string_fn]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    WITH returned AS (
+        SELECT DISTINCT order_item_id FROM returns
+    )
+    SELECT LOWER(TRIM(p.category)) AS category,
+           COUNT(*) AS items,
+           COUNT(r.order_item_id) AS returned_items,
+           COUNT(r.order_item_id) / COUNT(*) AS return_share
+    FROM order_items AS oi
+    JOIN products AS p ON p.product_id = oi.product_id
+    LEFT JOIN returned AS r ON r.order_item_id = oi.order_item_id
+    GROUP BY LOWER(TRIM(p.category))
+  databricks: |
+    WITH returned AS (
+        SELECT DISTINCT order_item_id FROM returns
+    )
+    SELECT LOWER(TRIM(p.category)) AS category,
+           COUNT(*) AS items,
+           COUNT(r.order_item_id) AS returned_items,
+           COUNT(r.order_item_id) / COUNT(*) AS return_share
+    FROM order_items AS oi
+    JOIN products AS p ON p.product_id = oi.product_id
+    LEFT JOIN returned AS r ON r.order_item_id = oi.order_item_id
+    GROUP BY LOWER(TRIM(p.category))
+order_matters: false
+float_tolerance: 1e-06
+status: draft

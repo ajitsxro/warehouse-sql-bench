@@ -1,0 +1,26 @@
+id: ecommerce_022
+schema: ecommerce
+question: >-
+  For each spec key that appears in products' specs (such as color, size or
+  material), how many products define it?
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  Iterating over map keys: LATERAL FLATTEN of the OBJECT on Snowflake,
+  explode(map_keys(...)) on Databricks.
+features: [flatten_explode, struct_map_access, aggregate]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT f.key AS spec_key, COUNT(*) AS products
+    FROM products AS p,
+         LATERAL FLATTEN(input => p.specs) AS f
+    GROUP BY f.key
+  databricks: |
+    SELECT spec_key, COUNT(*) AS products
+    FROM products
+    LATERAL VIEW explode(map_keys(specs)) t AS spec_key
+    GROUP BY spec_key
+order_matters: false
+float_tolerance: 0
+status: draft

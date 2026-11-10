@@ -1,0 +1,29 @@
+id: ecommerce_030
+schema: ecommerce
+question: >-
+  How many orders placed in 2024 (UTC) have at least one cart line in
+  attributes.items with a qty of 4 or more?
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  Testing JSON array elements: LATERAL FLATTEN on Snowflake; a higher-order
+  exists() over the array cast to ARRAY<VARIANT> on Databricks.
+features: [flatten_explode, higher_order_fn, semi_structured_path, aggregate, distinct]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT COUNT(DISTINCT o.order_id) AS orders
+    FROM orders AS o,
+         LATERAL FLATTEN(input => o.attributes:items) AS f
+    WHERE o.placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND o.placed_at < TIMESTAMP '2025-01-01 00:00:00'
+      AND f.value:qty::INT >= 4
+  databricks: |
+    SELECT COUNT(*) AS orders
+    FROM orders AS o
+    WHERE o.placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND o.placed_at < TIMESTAMP '2025-01-01 00:00:00'
+      AND exists(CAST(o.attributes:items AS ARRAY<VARIANT>), line -> line:qty::INT >= 4)
+order_matters: false
+float_tolerance: 0
+status: draft

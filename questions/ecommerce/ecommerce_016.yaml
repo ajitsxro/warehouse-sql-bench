@@ -1,0 +1,24 @@
+id: ecommerce_016
+schema: ecommerce
+question: >-
+  How many orders came through each checkout channel (the channel field of the
+  attributes payload)? Orders with no payload, or no channel value in it,
+  count as 'unknown'.
+category: portable
+divergence: none
+features: [semi_structured_path, null_handling, aggregate]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT COALESCE(attributes:channel::STRING, 'unknown') AS channel,
+           COUNT(*) AS orders
+    FROM orders
+    GROUP BY COALESCE(attributes:channel::STRING, 'unknown')
+  databricks: |
+    SELECT COALESCE(attributes:channel::STRING, 'unknown') AS channel,
+           COUNT(*) AS orders
+    FROM orders
+    GROUP BY COALESCE(attributes:channel::STRING, 'unknown')
+order_matters: false
+float_tolerance: 0
+status: draft

@@ -1,0 +1,23 @@
+id: ecommerce_017
+schema: ecommerce
+question: >-
+  How many products have each color in their specs? Products without a color
+  entry count as 'none'.
+category: portable
+divergence: none
+features: [struct_map_access, null_handling, aggregate]
+difficulty: easy
+gold_sql:
+  snowflake: |
+    SELECT COALESCE(specs['color']::STRING, 'none') AS color,
+           COUNT(*) AS products
+    FROM products
+    GROUP BY COALESCE(specs['color']::STRING, 'none')
+  databricks: |
+    SELECT COALESCE(specs['color']::STRING, 'none') AS color,
+           COUNT(*) AS products
+    FROM products
+    GROUP BY COALESCE(specs['color']::STRING, 'none')
+order_matters: false
+float_tolerance: 0
+status: draft

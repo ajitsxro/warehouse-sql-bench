@@ -1,0 +1,24 @@
+id: ecommerce_010
+schema: ecommerce
+question: >-
+  How many distinct products appear in orders placed in December 2024 (UTC)?
+category: portable
+divergence: none
+features: [join, aggregate, distinct]
+difficulty: easy
+gold_sql:
+  snowflake: |
+    SELECT COUNT(DISTINCT oi.product_id) AS products
+    FROM order_items AS oi
+    JOIN orders AS o ON o.order_id = oi.order_id
+    WHERE o.placed_at >= TIMESTAMP '2024-12-01 00:00:00'
+      AND o.placed_at < TIMESTAMP '2025-01-01 00:00:00'
+  databricks: |
+    SELECT COUNT(DISTINCT oi.product_id) AS products
+    FROM order_items AS oi
+    JOIN orders AS o ON o.order_id = oi.order_id
+    WHERE o.placed_at >= TIMESTAMP '2024-12-01 00:00:00'
+      AND o.placed_at < TIMESTAMP '2025-01-01 00:00:00'
+order_matters: false
+float_tolerance: 0
+status: draft

@@ -1,0 +1,26 @@
+id: ecommerce_019
+schema: ecommerce
+question: >-
+  How many products carry each tag? Return the tag and the number of products;
+  a product that lists the same tag twice counts once.
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  Expanding an array into rows: LATERAL FLATTEN on Snowflake, explode on
+  Databricks.
+features: [flatten_explode, aggregate, distinct]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT f.value::STRING AS tag, COUNT(DISTINCT p.product_id) AS products
+    FROM products AS p,
+         LATERAL FLATTEN(input => p.tags) AS f
+    GROUP BY f.value::STRING
+  databricks: |
+    SELECT tag, COUNT(DISTINCT product_id) AS products
+    FROM products
+    LATERAL VIEW explode(tags) t AS tag
+    GROUP BY tag
+order_matters: false
+float_tolerance: 0
+status: draft
