@@ -23,6 +23,11 @@ from sqlbench.load.databricks_loader import DatabricksLoader
 from sqlbench.load.dataset import Loader, LoadError, load_dataset, read_manifest, session_context
 from sqlbench.load.duckdb_loader import DuckDBLoader
 from sqlbench.load.snowflake_loader import SnowflakeLoader
+from sqlbench.models.cache import ResponseCache, cache_key
+from sqlbench.models.clients import PacedClient, ProviderError, RateLimiter, make_client
+from sqlbench.models.config import find_model, load_models
+from sqlbench.models.generate import build_prompt, estimate_cost, generate
+from sqlbench.models.prompt import load_template
 from sqlbench.questions.check import GOLD_WAREHOUSES, PROFILES, GoldTargets, check_question
 from sqlbench.questions.lint import lint_files
 from sqlbench.questions.model import Question, Status, load_question, question_paths
@@ -40,6 +45,9 @@ SCHEMAS_DIR = Path("schemas")
 DATA_DIR = Path("data")
 MANIFESTS_DIR = Path("manifests")
 QUESTIONS_DIR = Path("questions")
+MODELS_FILE = Path("models.yaml")
+PROMPT_FILE = Path("prompts/v1.txt")
+RESPONSE_CACHE = Path("results/llm_cache.duckdb")
 DEFAULT_SEED = 20261105
 DUCKDB_FILE_NAME = "sqlbench.duckdb"
 
@@ -430,3 +438,89 @@ def verify_questions(
         f"verified {counts[Choice.VERIFY]}, rejected {counts[Choice.REJECT]}, "
         f"skipped {counts[Choice.SKIP]}"
     )
+
+
+@app.command("generate")
+def generate_sql(
+    model: Annotated[str, typer.Option("--model", help="Model id from models.yaml.")],
+    warehouse: Annotated[WarehouseName, typer.Option("--warehouse", "-w")],
+    schema: Annotated[str | None, typer.Option(help="One schema's questions.")] = None,
+    limit: Annotated[int | None, typer.Option(help="At most this many questions.")] = None,
+    drafts: Annotated[
+        bool, typer.Option("--drafts", help="Include draft questions (for spot checks).")
+    ] = False,
+    yes: Annotated[bool, typer.Option("--yes", help="Skip the cost confirmation.")] = False,
+    models_file: Annotated[Path, typer.Option()] = MODELS_FILE,
+    prompt_file: Annotated[Path, typer.Option()] = PROMPT_FILE,
+    cache_file: Annotated[Path, typer.Option()] = RESPONSE_CACHE,
+    questions_dir: Annotated[Path, typer.Option("--dir")] = QUESTIONS_DIR,
+    schemas_dir: Annotated[Path, typer.Option("--schemas-dir")] = SCHEMAS_DIR,
+    data_dir: Annotated[Path, typer.Option()] = DATA_DIR,
+) -> None:
+    """Ask a model for each question's SQL and print what it returned. Runs no SQL."""
+    if warehouse == WarehouseName.DUCKDB:
+        typer.echo("questions have gold SQL for snowflake and databricks only", err=True)
+        raise typer.Exit(code=2)
+    config = find_model(load_models(models_file), model)
+    template = load_template(prompt_file)
+    allowed = {Status.VERIFIED, Status.DRAFT} if drafts else {Status.VERIFIED}
+    clean, _ = lint_and_load(question_paths(questions_dir, schema), schemas_dir)
+    chosen = [question for _, question in clean if question.status in allowed]
+    if limit is not None:
+        chosen = chosen[:limit]
+    if not chosen:
+        typer.echo("no questions to generate for (verified only, unless --drafts)")
+        raise typer.Exit(code=1)
+
+    schemas = {}
+    prompts = []
+    for question in chosen:
+        if question.schema_name not in schemas:
+            schemas[question.schema_name] = load_schema(
+                schemas_dir / f"{question.schema_name}.yaml"
+            )
+        prompts.append(
+            build_prompt(template, schemas[question.schema_name], warehouse, question, data_dir)
+        )
+
+    cache = ResponseCache(cache_file)
+    try:
+        uncached = [prompt for prompt in prompts if cache.get(cache_key(config, prompt)) is None]
+        estimate = estimate_cost(config, uncached)
+        typer.echo(
+            f"{len(chosen)} questions, {len(uncached)} not cached: "
+            f"at most ${estimate:.2f} for {config.id}"
+        )
+        if estimate > 0 and not yes and not typer.confirm("Call the model?"):
+            raise typer.Exit(code=1)
+        try:
+            client = PacedClient(make_client(config), RateLimiter(config.requests_per_minute))
+        except MissingEnvError as error:
+            typer.echo(str(error), err=True)
+            raise typer.Exit(code=1) from error
+
+        total_cost = 0.0
+        failures = 0
+        for question, prompt in zip(chosen, prompts, strict=True):
+            try:
+                result = generate(question, prompt, warehouse, config, client, cache, template)
+            except ProviderError as error:
+                failures += 1
+                typer.echo(f"{question.id}: provider error: {error}", err=True)
+                continue
+            total_cost += result.cost_usd
+            source = "cached" if result.cached else f"${result.cost_usd:.4f}"
+            typer.echo(
+                f"{question.id}: {result.completion.input_tokens:,} in / "
+                f"{result.completion.output_tokens:,} out tokens, {source}"
+            )
+            if result.sql is None:
+                typer.echo("  no SQL in the response")
+            else:
+                for line in result.sql.splitlines():
+                    typer.echo(f"  {line}")
+    finally:
+        cache.close()
+    typer.echo(f"spent ${total_cost:.4f}; {failures} provider errors")
+    if failures:
+        raise typer.Exit(code=1)
