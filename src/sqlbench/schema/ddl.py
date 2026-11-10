@@ -70,12 +70,13 @@ TYPE_NAMERS: dict[WarehouseName, Callable[[LogicalType], str]] = {
 
 
 def create_table_statements(
-    schema: SchemaSpec, dialect: WarehouseName, target_schema: str
+    schema: SchemaSpec, dialect: WarehouseName, target_schema: str | None
 ) -> list[str]:
     """CREATE OR REPLACE TABLE per table, parents before children.
 
     Keys become informational PRIMARY KEY / FOREIGN KEY constraints. Neither
-    warehouse enforces them, but they document the join graph.
+    warehouse enforces them, but they document the join graph. With no
+    target schema, table names are bare, as the prompt shows them to models.
     """
     if dialect not in TYPE_NAMERS:
         raise ValueError(f"no DDL emitter for {dialect}")
@@ -86,16 +87,20 @@ def create_table_statements(
     return statements
 
 
-def foreign_key(table: TableSpec, column: ColumnSpec, target: str) -> str:
+def qualified(name: str, target: str | None) -> str:
+    return name if target is None else f"{target}.{name}"
+
+
+def foreign_key(table: TableSpec, column: ColumnSpec, target: str | None) -> str:
     assert column.references is not None
     parent_table, parent_column = column.references.split(".")
     return (
         f"CONSTRAINT {table.name}_{column.name}_fk FOREIGN KEY ({column.name}) "
-        f"REFERENCES {target}.{parent_table} ({parent_column})"
+        f"REFERENCES {qualified(parent_table, target)} ({parent_column})"
     )
 
 
-def self_reference_constraints(table: TableSpec, target: str) -> list[str]:
+def self_reference_constraints(table: TableSpec, target: str | None) -> list[str]:
     """Foreign keys a table has on itself, added once the table exists.
 
     Databricks looks up the referenced table while creating the referencing
@@ -105,11 +110,13 @@ def self_reference_constraints(table: TableSpec, target: str) -> list[str]:
     for column in table.columns:
         if is_self_reference(table, column):
             constraint = foreign_key(table, column, target)
-            statements.append(f"ALTER TABLE {target}.{table.name} ADD {constraint}")
+            statements.append(f"ALTER TABLE {qualified(table.name, target)} ADD {constraint}")
     return statements
 
 
-def create_table(table: TableSpec, type_name: Callable[[LogicalType], str], target: str) -> str:
+def create_table(
+    table: TableSpec, type_name: Callable[[LogicalType], str], target: str | None
+) -> str:
     lines: list[str] = []
     for column in table.columns:
         line = f"{column.name} {type_name(column.logical_type)}"
@@ -122,4 +129,4 @@ def create_table(table: TableSpec, type_name: Callable[[LogicalType], str], targ
         if column.references is not None and not is_self_reference(table, column):
             lines.append(foreign_key(table, column, target))
     body = ",\n    ".join(lines)
-    return f"CREATE OR REPLACE TABLE {target}.{table.name} (\n    {body}\n)"
+    return f"CREATE OR REPLACE TABLE {qualified(table.name, target)} (\n    {body}\n)"
