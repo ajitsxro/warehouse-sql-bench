@@ -20,7 +20,13 @@ from sqlbench.datagen.values import (
     generate_series,
     generate_values,
 )
-from sqlbench.schema.spec import ColumnSpec, SchemaSpec, TableSpec, load_schema
+from sqlbench.schema.spec import (
+    ColumnSpec,
+    SchemaSpec,
+    TableSpec,
+    is_self_reference,
+    load_schema,
+)
 from sqlbench.schema.types import NUMERIC_KINDS, TEMPORAL_KINDS, LogicalType, TypeKind
 
 # Bump when the same seed would produce different data, so old manifests are
@@ -70,10 +76,6 @@ def generate_tables(schema: SchemaSpec, profile: Profile, seed: int) -> dict[str
     if profile == Profile.EDGE:
         apply_edge_injectors(schema, tables, seed)
     return tables
-
-
-def is_self_reference(table: TableSpec, column: ColumnSpec) -> bool:
-    return column.references is not None and column.references.split(".")[0] == table.name
 
 
 def arrow_type(logical_type: LogicalType) -> pa.DataType:

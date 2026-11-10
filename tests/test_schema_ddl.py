@@ -91,3 +91,24 @@ def test_statements_parse_in_their_dialect(dialect: WarehouseName) -> None:
 def test_duckdb_has_no_emitter() -> None:
     with pytest.raises(ValueError, match="no DDL emitter"):
         create_table_statements(SCHEMA, WarehouseName.DUCKDB, "mini_shop")
+
+
+def test_self_reference_is_added_after_the_table_exists() -> None:
+    org = load_schema(Path(__file__).parent / "fixtures" / "mini_org.yaml")
+    statements = create_table_statements(org, WarehouseName.DATABRICKS, "mini_org")
+
+    create_index = statements.index(
+        next(
+            sql
+            for sql in statements
+            if sql.startswith("CREATE OR REPLACE TABLE mini_org.employees")
+        )
+    )
+    assert "manager_id_fk" not in statements[create_index]
+    assert "departments (department_id)" in statements[create_index]
+    assert statements[create_index + 1] == (
+        "ALTER TABLE mini_org.employees ADD CONSTRAINT employees_manager_id_fk "
+        "FOREIGN KEY (manager_id) REFERENCES mini_org.employees (employee_id)"
+    )
+    alters = [sql for sql in statements if sql.startswith("ALTER")]
+    assert len(alters) == 1

@@ -6,7 +6,7 @@ exact equivalent, the differences are listed in docs/type_mapping.md.
 
 from collections.abc import Callable
 
-from sqlbench.schema.spec import SchemaSpec, TableSpec
+from sqlbench.schema.spec import ColumnSpec, SchemaSpec, TableSpec, is_self_reference
 from sqlbench.schema.types import LogicalType, TypeKind
 from sqlbench.warehouses.base import WarehouseName
 
@@ -72,7 +72,7 @@ TYPE_NAMERS: dict[WarehouseName, Callable[[LogicalType], str]] = {
 def create_table_statements(
     schema: SchemaSpec, dialect: WarehouseName, target_schema: str
 ) -> list[str]:
-    """One CREATE OR REPLACE TABLE per table, parents before children.
+    """CREATE OR REPLACE TABLE per table, parents before children.
 
     Keys become informational PRIMARY KEY / FOREIGN KEY constraints. Neither
     warehouse enforces them, but they document the join graph.
@@ -82,6 +82,30 @@ def create_table_statements(
     statements: list[str] = []
     for table in schema.tables_in_dependency_order():
         statements.append(create_table(table, TYPE_NAMERS[dialect], target_schema))
+        statements.extend(self_reference_constraints(table, target_schema))
+    return statements
+
+
+def foreign_key(table: TableSpec, column: ColumnSpec, target: str) -> str:
+    assert column.references is not None
+    parent_table, parent_column = column.references.split(".")
+    return (
+        f"CONSTRAINT {table.name}_{column.name}_fk FOREIGN KEY ({column.name}) "
+        f"REFERENCES {target}.{parent_table} ({parent_column})"
+    )
+
+
+def self_reference_constraints(table: TableSpec, target: str) -> list[str]:
+    """Foreign keys a table has on itself, added once the table exists.
+
+    Databricks looks up the referenced table while creating the referencing
+    one, so a key on the table being created fails with TABLE_OR_VIEW_NOT_FOUND.
+    """
+    statements: list[str] = []
+    for column in table.columns:
+        if is_self_reference(table, column):
+            constraint = foreign_key(table, column, target)
+            statements.append(f"ALTER TABLE {target}.{table.name} ADD {constraint}")
     return statements
 
 
@@ -95,12 +119,7 @@ def create_table(table: TableSpec, type_name: Callable[[LogicalType], str], targ
     if table.primary_key is not None:
         lines.append(f"CONSTRAINT {table.name}_pk PRIMARY KEY ({table.primary_key})")
     for column in table.columns:
-        if column.references is None:
-            continue
-        parent_table, parent_column = column.references.split(".")
-        lines.append(
-            f"CONSTRAINT {table.name}_{column.name}_fk FOREIGN KEY ({column.name}) "
-            f"REFERENCES {target}.{parent_table} ({parent_column})"
-        )
+        if column.references is not None and not is_self_reference(table, column):
+            lines.append(foreign_key(table, column, target))
     body = ",\n    ".join(lines)
     return f"CREATE OR REPLACE TABLE {target}.{table.name} (\n    {body}\n)"

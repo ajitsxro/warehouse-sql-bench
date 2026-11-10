@@ -11,7 +11,7 @@ from snowflake.connector import SnowflakeConnection
 from snowflake.connector.errors import Error as SnowflakeError
 
 from sqlbench.load.dataset import DATABASE, LoadError
-from sqlbench.schema.ddl import create_table, snowflake_type
+from sqlbench.schema.ddl import create_table, self_reference_constraints, snowflake_type
 from sqlbench.schema.spec import TableSpec
 from sqlbench.schema.types import TypeKind
 from sqlbench.settings import require_env
@@ -55,6 +55,8 @@ class SnowflakeLoader:
 
     def load_table(self, target: str, table: TableSpec, parquet_path: Path) -> None:
         self.run(create_table(table, snowflake_type, target))
+        for statement in self_reference_constraints(table, target):
+            self.run(statement)
         self.run(
             f"PUT 'file://{parquet_path.resolve()}' @{STAGE}/{target}/ "
             "OVERWRITE = TRUE AUTO_COMPRESS = FALSE"
