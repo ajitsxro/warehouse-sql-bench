@@ -1,0 +1,20 @@
+id: hr_people_002
+schema: hr_people
+question: >-
+  How many employees have no manager recorded?
+category: portable
+divergence: none
+features: [aggregate, null_handling]
+difficulty: easy
+gold_sql:
+  snowflake: |
+    SELECT COUNT(*) AS employees
+    FROM employees
+    WHERE manager_id IS NULL
+  databricks: |
+    SELECT COUNT(*) AS employees
+    FROM employees
+    WHERE manager_id IS NULL
+order_matters: false
+float_tolerance: 0
+status: draft

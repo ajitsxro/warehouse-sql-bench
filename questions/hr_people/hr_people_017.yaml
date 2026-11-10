@@ -1,0 +1,21 @@
+id: hr_people_017
+schema: hr_people
+question: >-
+  How many reviews gave a leadership score of 5 in their scores? Reviews
+  without a leadership score don't count.
+category: portable
+divergence: none
+features: [struct_map_access, aggregate]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT COUNT(*) AS reviews
+    FROM reviews
+    WHERE scores['leadership']::INT = 5
+  databricks: |
+    SELECT COUNT(*) AS reviews
+    FROM reviews
+    WHERE scores['leadership']::INT = 5
+order_matters: false
+float_tolerance: 0
+status: draft

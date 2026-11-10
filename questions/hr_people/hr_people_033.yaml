@@ -1,0 +1,31 @@
+id: hr_people_033
+schema: hr_people
+question: >-
+  For employees terminated during 2024, count the calendar months from their
+  hire month to their termination month (hired in March 2023 and terminated in
+  May 2024 counts as 14). Return that number of months and how many employees
+  have it.
+category: dialect_sensitive
+divergence: semantics
+divergence_note: >-
+  DATEDIFF(month, ...) counts month boundaries on Snowflake but whole months
+  on Databricks (probes datediff_month, datediff_month_full).
+features: [date_math, aggregate]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT DATEDIFF(month, hire_date, termination_date) AS months, COUNT(*) AS employees
+    FROM employees
+    WHERE termination_date >= DATE '2024-01-01' AND termination_date < DATE '2025-01-01'
+    GROUP BY DATEDIFF(month, hire_date, termination_date)
+  databricks: |
+    SELECT (YEAR(termination_date) - YEAR(hire_date)) * 12
+               + MONTH(termination_date) - MONTH(hire_date) AS months,
+           COUNT(*) AS employees
+    FROM employees
+    WHERE termination_date >= DATE '2024-01-01' AND termination_date < DATE '2025-01-01'
+    GROUP BY (YEAR(termination_date) - YEAR(hire_date)) * 12
+               + MONTH(termination_date) - MONTH(hire_date)
+order_matters: false
+float_tolerance: 0
+status: draft

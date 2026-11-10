@@ -1,0 +1,36 @@
+id: hr_people_025
+schema: hr_people
+question: >-
+  For employees 1 through 20, list the overall ratings of the reviews they
+  received as an array ordered by submission time (ties by the lower
+  review_id), leaving out reviews without a rating. Employees with no rated
+  reviews are left out. Return employee_id and the array.
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  An array aggregate ordered by another column: ARRAY_AGG ... WITHIN GROUP
+  (ORDER BY ...) on Snowflake; on Databricks, sort collected structs and
+  transform them back to ratings.
+features: [array_fn, higher_order_fn, aggregate]
+difficulty: hard
+gold_sql:
+  snowflake: |
+    SELECT employee_id,
+           ARRAY_AGG(rating) WITHIN GROUP (ORDER BY submitted_at, review_id) AS ratings
+    FROM reviews
+    WHERE employee_id BETWEEN 1 AND 20
+      AND rating IS NOT NULL
+    GROUP BY employee_id
+  databricks: |
+    SELECT employee_id,
+           transform(
+               array_sort(collect_list(struct(submitted_at, review_id, rating))),
+               x -> x.rating
+           ) AS ratings
+    FROM reviews
+    WHERE employee_id BETWEEN 1 AND 20
+      AND rating IS NOT NULL
+    GROUP BY employee_id
+order_matters: false
+float_tolerance: 0
+status: draft

@@ -1,0 +1,36 @@
+id: hr_people_016
+schema: hr_people
+question: >-
+  Take the employees employed on 2024-01-01 (hired on or before it and never
+  terminated or terminated after it). For each department (name trimmed and
+  lower-cased), how many of them were there, how many were terminated on or
+  before 2024-12-31, and what share is that (a fraction between 0 and 1)?
+  Departments with nobody employed on 2024-01-01 are left out.
+category: portable
+divergence: none
+features: [join, aggregate, conditional, null_handling, string_fn]
+difficulty: hard
+gold_sql:
+  snowflake: |
+    SELECT LOWER(TRIM(d.department_name)) AS department,
+           COUNT(*) AS employed_on_jan_1,
+           SUM(CASE WHEN e.termination_date <= DATE '2024-12-31' THEN 1 ELSE 0 END) AS terminated_in_2024,
+           SUM(CASE WHEN e.termination_date <= DATE '2024-12-31' THEN 1 ELSE 0 END) / COUNT(*) AS attrition
+    FROM employees AS e
+    JOIN departments AS d ON d.department_id = e.department_id
+    WHERE e.hire_date <= DATE '2024-01-01'
+      AND (e.termination_date IS NULL OR e.termination_date > DATE '2024-01-01')
+    GROUP BY LOWER(TRIM(d.department_name))
+  databricks: |
+    SELECT LOWER(TRIM(d.department_name)) AS department,
+           COUNT(*) AS employed_on_jan_1,
+           SUM(CASE WHEN e.termination_date <= DATE '2024-12-31' THEN 1 ELSE 0 END) AS terminated_in_2024,
+           SUM(CASE WHEN e.termination_date <= DATE '2024-12-31' THEN 1 ELSE 0 END) / COUNT(*) AS attrition
+    FROM employees AS e
+    JOIN departments AS d ON d.department_id = e.department_id
+    WHERE e.hire_date <= DATE '2024-01-01'
+      AND (e.termination_date IS NULL OR e.termination_date > DATE '2024-01-01')
+    GROUP BY LOWER(TRIM(d.department_name))
+order_matters: false
+float_tolerance: 1e-06
+status: draft

@@ -1,0 +1,41 @@
+id: hr_people_006
+schema: hr_people
+question: >-
+  Starting from the CEO (employee 1, at depth 1), follow manager links
+  downward. How many employees are at each depth of employee 1's reporting
+  tree? Employees who can't be reached from employee 1 (for example because a
+  manager link is missing) are left out.
+category: portable
+divergence: none
+features: [recursive_cte, aggregate]
+difficulty: hard
+gold_sql:
+  snowflake: |
+    WITH RECURSIVE tree (employee_id, depth) AS (
+        SELECT employee_id, 1
+        FROM employees
+        WHERE employee_id = 1
+        UNION ALL
+        SELECT e.employee_id, t.depth + 1
+        FROM employees AS e
+        JOIN tree AS t ON e.manager_id = t.employee_id
+    )
+    SELECT depth, COUNT(*) AS employees
+    FROM tree
+    GROUP BY depth
+  databricks: |
+    WITH RECURSIVE tree (employee_id, depth) AS (
+        SELECT employee_id, 1
+        FROM employees
+        WHERE employee_id = 1
+        UNION ALL
+        SELECT e.employee_id, t.depth + 1
+        FROM employees AS e
+        JOIN tree AS t ON e.manager_id = t.employee_id
+    )
+    SELECT depth, COUNT(*) AS employees
+    FROM tree
+    GROUP BY depth
+order_matters: false
+float_tolerance: 0
+status: draft

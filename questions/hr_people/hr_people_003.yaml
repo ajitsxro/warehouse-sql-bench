@@ -1,0 +1,31 @@
+id: hr_people_003
+schema: hr_people
+question: >-
+  How many employees were employed on 2024-12-31 in each department? An
+  employee is employed on a date if hired on or before it and either never
+  terminated or terminated after it. List every department (name trimmed and
+  lower-cased), with 0 where nobody was employed.
+category: portable
+divergence: none
+features: [join, aggregate, null_handling, string_fn]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT LOWER(TRIM(d.department_name)) AS department, COUNT(e.employee_id) AS headcount
+    FROM departments AS d
+    LEFT JOIN employees AS e
+      ON e.department_id = d.department_id
+     AND e.hire_date <= DATE '2024-12-31'
+     AND (e.termination_date IS NULL OR e.termination_date > DATE '2024-12-31')
+    GROUP BY LOWER(TRIM(d.department_name))
+  databricks: |
+    SELECT LOWER(TRIM(d.department_name)) AS department, COUNT(e.employee_id) AS headcount
+    FROM departments AS d
+    LEFT JOIN employees AS e
+      ON e.department_id = d.department_id
+     AND e.hire_date <= DATE '2024-12-31'
+     AND (e.termination_date IS NULL OR e.termination_date > DATE '2024-12-31')
+    GROUP BY LOWER(TRIM(d.department_name))
+order_matters: false
+float_tolerance: 0
+status: draft

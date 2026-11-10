@@ -1,0 +1,43 @@
+id: hr_people_029
+schema: hr_people
+question: >-
+  For each review submitted in December 2024 (UTC), which competency got the
+  highest score? Break ties alphabetically by competency name. Reviews with no
+  scores are left out. Return review_id, competency and score.
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  Expanding a map into key/value rows: LATERAL FLATTEN on Snowflake, explode
+  on Databricks.
+features: [flatten_explode, struct_map_access, window, subquery]
+difficulty: hard
+gold_sql:
+  snowflake: |
+    SELECT review_id, competency, score
+    FROM (
+        SELECT r.review_id,
+               f.key AS competency,
+               f.value::INT AS score,
+               ROW_NUMBER() OVER (PARTITION BY r.review_id ORDER BY f.value::INT DESC, f.key) AS position
+        FROM reviews AS r,
+             LATERAL FLATTEN(input => r.scores) AS f
+        WHERE r.submitted_at >= TIMESTAMP '2024-12-01 00:00:00'
+          AND r.submitted_at < TIMESTAMP '2025-01-01 00:00:00'
+    ) AS ranked
+    WHERE position = 1
+  databricks: |
+    SELECT review_id, competency, score
+    FROM (
+        SELECT review_id,
+               competency,
+               score,
+               ROW_NUMBER() OVER (PARTITION BY review_id ORDER BY score DESC, competency) AS position
+        FROM reviews
+        LATERAL VIEW explode(scores) t AS competency, score
+        WHERE submitted_at >= TIMESTAMP '2024-12-01 00:00:00'
+          AND submitted_at < TIMESTAMP '2025-01-01 00:00:00'
+    ) AS ranked
+    WHERE position = 1
+order_matters: false
+float_tolerance: 0
+status: draft

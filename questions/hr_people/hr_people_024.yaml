@@ -1,0 +1,25 @@
+id: hr_people_024
+schema: hr_people
+question: >-
+  For employees hired in 2024, give each one's skills as a comma-separated
+  string in alphabetical order, without spaces (an empty string when they list
+  none). Return employee_id and the skills string.
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  Joining array elements into a string: ARRAY_TO_STRING on Snowflake,
+  array_join on Databricks.
+features: [array_fn, string_fn]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT employee_id, ARRAY_TO_STRING(ARRAY_SORT(skills), ',') AS skill_list
+    FROM employees
+    WHERE hire_date >= DATE '2024-01-01' AND hire_date < DATE '2025-01-01'
+  databricks: |
+    SELECT employee_id, array_join(array_sort(skills), ',') AS skill_list
+    FROM employees
+    WHERE hire_date >= DATE '2024-01-01' AND hire_date < DATE '2025-01-01'
+order_matters: false
+float_tolerance: 0
+status: draft

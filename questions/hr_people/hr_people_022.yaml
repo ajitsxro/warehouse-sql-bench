@@ -1,0 +1,24 @@
+id: hr_people_022
+schema: hr_people
+question: >-
+  How many reviews score 0, 1, 2, 3 or 4 competencies? Return the number of
+  scored competencies and the number of reviews.
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  Size of a map: ARRAY_SIZE(OBJECT_KEYS(...)) on Snowflake, size(...) on
+  Databricks.
+features: [struct_map_access, aggregate]
+difficulty: easy
+gold_sql:
+  snowflake: |
+    SELECT ARRAY_SIZE(OBJECT_KEYS(scores)) AS competencies, COUNT(*) AS reviews
+    FROM reviews
+    GROUP BY ARRAY_SIZE(OBJECT_KEYS(scores))
+  databricks: |
+    SELECT size(scores) AS competencies, COUNT(*) AS reviews
+    FROM reviews
+    GROUP BY size(scores)
+order_matters: false
+float_tolerance: 0
+status: draft

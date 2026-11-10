@@ -1,0 +1,40 @@
+id: hr_people_015
+schema: hr_people
+question: >-
+  For each calendar year from 2010 through 2024, how many employees were hired
+  and how many were terminated in that year? Include years with at least one
+  hire or termination, showing 0 for the other count.
+category: portable
+divergence: none
+features: [cte, set_operation, aggregate, date_math]
+difficulty: hard
+gold_sql:
+  snowflake: |
+    WITH events AS (
+        SELECT YEAR(hire_date) AS event_year, 1 AS hired, 0 AS terminated
+        FROM employees
+        UNION ALL
+        SELECT YEAR(termination_date), 0, 1
+        FROM employees
+        WHERE termination_date IS NOT NULL
+    )
+    SELECT event_year, SUM(hired) AS hires, SUM(terminated) AS terminations
+    FROM events
+    WHERE event_year BETWEEN 2010 AND 2024
+    GROUP BY event_year
+  databricks: |
+    WITH events AS (
+        SELECT YEAR(hire_date) AS event_year, 1 AS hired, 0 AS terminated
+        FROM employees
+        UNION ALL
+        SELECT YEAR(termination_date), 0, 1
+        FROM employees
+        WHERE termination_date IS NOT NULL
+    )
+    SELECT event_year, SUM(hired) AS hires, SUM(terminated) AS terminations
+    FROM events
+    WHERE event_year BETWEEN 2010 AND 2024
+    GROUP BY event_year
+order_matters: false
+float_tolerance: 0
+status: draft

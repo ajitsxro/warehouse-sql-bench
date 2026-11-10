@@ -1,0 +1,23 @@
+id: hr_people_005
+schema: hr_people
+question: >-
+  How many employees work in a different department from their manager?
+  Employees without a manager are not counted.
+category: portable
+divergence: none
+features: [self_join, aggregate]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT COUNT(*) AS employees
+    FROM employees AS e
+    JOIN employees AS m ON m.employee_id = e.manager_id
+    WHERE e.department_id <> m.department_id
+  databricks: |
+    SELECT COUNT(*) AS employees
+    FROM employees AS e
+    JOIN employees AS m ON m.employee_id = e.manager_id
+    WHERE e.department_id <> m.department_id
+order_matters: false
+float_tolerance: 0
+status: draft

@@ -1,0 +1,51 @@
+id: hr_people_010
+schema: hr_people
+question: >-
+  Compare consecutive compensation rows of the same employee (ordered by
+  valid_from) that are in the same currency (trimmed, upper-cased). Which 10
+  have the largest percentage increase in base_salary from the earlier row?
+  Return the later row's compensation_id, the employee_id and the increase in
+  percent (12.5 means 12.5%), largest first, breaking ties by the lower
+  compensation_id.
+category: portable
+divergence: none
+features: [cte, window]
+difficulty: hard
+gold_sql:
+  snowflake: |
+    WITH steps AS (
+        SELECT compensation_id,
+               employee_id,
+               UPPER(TRIM(currency)) AS currency,
+               base_salary,
+               LAG(base_salary) OVER (PARTITION BY employee_id ORDER BY valid_from) AS previous_salary,
+               LAG(UPPER(TRIM(currency))) OVER (PARTITION BY employee_id ORDER BY valid_from) AS previous_currency
+        FROM compensation_history
+    )
+    SELECT compensation_id,
+           employee_id,
+           (base_salary - previous_salary) * 100 / previous_salary AS increase_pct
+    FROM steps
+    WHERE currency = previous_currency
+    ORDER BY increase_pct DESC, compensation_id
+    LIMIT 10
+  databricks: |
+    WITH steps AS (
+        SELECT compensation_id,
+               employee_id,
+               UPPER(TRIM(currency)) AS currency,
+               base_salary,
+               LAG(base_salary) OVER (PARTITION BY employee_id ORDER BY valid_from) AS previous_salary,
+               LAG(UPPER(TRIM(currency))) OVER (PARTITION BY employee_id ORDER BY valid_from) AS previous_currency
+        FROM compensation_history
+    )
+    SELECT compensation_id,
+           employee_id,
+           (base_salary - previous_salary) * 100 / previous_salary AS increase_pct
+    FROM steps
+    WHERE currency = previous_currency
+    ORDER BY increase_pct DESC, compensation_id
+    LIMIT 10
+order_matters: true
+float_tolerance: 0.0001
+status: draft

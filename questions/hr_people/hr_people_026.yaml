@@ -1,0 +1,30 @@
+id: hr_people_026
+schema: hr_people
+question: >-
+  For employees who have a manager, how many distinct skills do they share
+  with their manager? Return the number of shared skills and how many
+  employees share that many.
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  Array intersection: ARRAY_INTERSECTION keeps duplicates on Snowflake, so
+  ARRAY_DISTINCT is needed; array_intersect on Databricks returns distinct
+  elements.
+features: [array_fn, self_join, aggregate]
+difficulty: hard
+gold_sql:
+  snowflake: |
+    SELECT ARRAY_SIZE(ARRAY_INTERSECTION(ARRAY_DISTINCT(e.skills), ARRAY_DISTINCT(m.skills))) AS shared_skills,
+           COUNT(*) AS employees
+    FROM employees AS e
+    JOIN employees AS m ON m.employee_id = e.manager_id
+    GROUP BY ARRAY_SIZE(ARRAY_INTERSECTION(ARRAY_DISTINCT(e.skills), ARRAY_DISTINCT(m.skills)))
+  databricks: |
+    SELECT size(array_intersect(e.skills, m.skills)) AS shared_skills,
+           COUNT(*) AS employees
+    FROM employees AS e
+    JOIN employees AS m ON m.employee_id = e.manager_id
+    GROUP BY size(array_intersect(e.skills, m.skills))
+order_matters: false
+float_tolerance: 0
+status: draft

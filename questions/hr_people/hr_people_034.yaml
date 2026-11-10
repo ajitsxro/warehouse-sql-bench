@@ -1,0 +1,34 @@
+id: hr_people_034
+schema: hr_people
+question: >-
+  For employees employed on 2024-06-30 (hired on or before it and never
+  terminated or terminated after it), count employees by completed years of
+  service on 2024-06-30: someone hired on 2023-06-30 has 1 completed year,
+  someone hired on 2023-07-01 has 0.
+category: dialect_sensitive
+divergence: semantics
+divergence_note: >-
+  DATEDIFF(year, ...) counts year boundaries on Snowflake but whole years on
+  Databricks (probe datediff_year).
+features: [date_math, aggregate, null_handling, conditional]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT DATEDIFF(year, e.hire_date, DATE '2024-06-30')
+               - CASE WHEN TO_CHAR(e.hire_date, 'MMDD') > '0630' THEN 1 ELSE 0 END AS completed_years,
+           COUNT(*) AS employees
+    FROM employees AS e
+    WHERE e.hire_date <= DATE '2024-06-30'
+      AND (e.termination_date IS NULL OR e.termination_date > DATE '2024-06-30')
+    GROUP BY DATEDIFF(year, e.hire_date, DATE '2024-06-30')
+               - CASE WHEN TO_CHAR(e.hire_date, 'MMDD') > '0630' THEN 1 ELSE 0 END
+  databricks: |
+    SELECT DATEDIFF(year, e.hire_date, DATE '2024-06-30') AS completed_years,
+           COUNT(*) AS employees
+    FROM employees AS e
+    WHERE e.hire_date <= DATE '2024-06-30'
+      AND (e.termination_date IS NULL OR e.termination_date > DATE '2024-06-30')
+    GROUP BY DATEDIFF(year, e.hire_date, DATE '2024-06-30')
+order_matters: false
+float_tolerance: 0
+status: draft

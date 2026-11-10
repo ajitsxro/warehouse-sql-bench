@@ -1,0 +1,29 @@
+id: hr_people_031
+schema: hr_people
+question: >-
+  Which 10 employees left most recently? Order by termination_date, latest
+  first, breaking ties by the lower employee_id; employees with no
+  termination_date are not part of the list. Return employee_id and
+  termination_date.
+category: dialect_sensitive
+divergence: semantics
+divergence_note: >-
+  ORDER BY ... DESC puts NULLs first on Snowflake and last on Databricks, so
+  an unfiltered descending top 10 returns current employees on Snowflake
+  (probe null_order_desc).
+features: [null_handling]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT employee_id, termination_date
+    FROM employees
+    ORDER BY termination_date DESC NULLS LAST, employee_id
+    LIMIT 10
+  databricks: |
+    SELECT employee_id, termination_date
+    FROM employees
+    ORDER BY termination_date DESC, employee_id
+    LIMIT 10
+order_matters: true
+float_tolerance: 0
+status: draft
