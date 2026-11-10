@@ -6,18 +6,17 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from question_files import question_data, write_question
+from question_files import FakeWarehouse, Rows, as_targets, question_data, targets, write_question
 from typer.testing import CliRunner
 
 from sqlbench import cli
 from sqlbench.datagen.tables import Profile
-from sqlbench.questions.check import GoldTargets, check_question
+from sqlbench.questions.check import check_question
 from sqlbench.questions.compare import first_difference, normalize_rows, normalize_value
 from sqlbench.questions.model import Question
 from sqlbench.warehouses.base import (
     ErrorCategory,
     QueryError,
-    QueryResult,
     SessionContext,
     Warehouse,
     WarehouseName,
@@ -26,46 +25,6 @@ from sqlbench.warehouses.base import (
 FIXTURES = Path(__file__).parent / "fixtures"
 SNOWFLAKE = WarehouseName.SNOWFLAKE
 DATABRICKS = WarehouseName.DATABRICKS
-
-Rows = list[tuple[Any, ...]]
-
-
-class FakeWarehouse:
-    """Returns fixed rows, or a fixed error, for every query."""
-
-    def __init__(self, name: WarehouseName, rows: Rows, error: QueryError | None = None) -> None:
-        self.name = name
-        self.rows = rows
-        self.error = error
-        self.queries: list[str] = []
-        self.closed = False
-
-    def execute(self, sql: str, timeout_s: int) -> QueryResult:
-        self.queries.append(sql)
-        if self.error is not None:
-            return QueryResult(elapsed_ms=1.0, error=self.error)
-        return QueryResult(elapsed_ms=1.0, rows=self.rows)
-
-    def close(self) -> None:
-        self.closed = True
-
-
-def targets(
-    snowflake_main: Rows, databricks_main: Rows, snowflake_edge: Rows, databricks_edge: Rows
-) -> dict[tuple[WarehouseName, Profile], FakeWarehouse]:
-    return {
-        (SNOWFLAKE, Profile.MAIN): FakeWarehouse(SNOWFLAKE, snowflake_main),
-        (SNOWFLAKE, Profile.EDGE): FakeWarehouse(SNOWFLAKE, snowflake_edge),
-        (DATABRICKS, Profile.MAIN): FakeWarehouse(DATABRICKS, databricks_main),
-        (DATABRICKS, Profile.EDGE): FakeWarehouse(DATABRICKS, databricks_edge),
-    }
-
-
-def as_targets(fakes: dict[tuple[WarehouseName, Profile], FakeWarehouse]) -> GoldTargets:
-    result: GoldTargets = {}
-    for key, fake in fakes.items():
-        result[key] = fake
-    return result
 
 
 def question(**changes: Any) -> Question:

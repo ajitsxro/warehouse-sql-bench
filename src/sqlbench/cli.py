@@ -1,5 +1,9 @@
 """Command-line entry point for the benchmark."""
 
+import datetime
+import os
+import shlex
+import subprocess
 from collections.abc import Iterator
 from contextlib import contextmanager
 from enum import StrEnum
@@ -22,6 +26,7 @@ from sqlbench.load.snowflake_loader import SnowflakeLoader
 from sqlbench.questions.check import GOLD_WAREHOUSES, PROFILES, GoldTargets, check_question
 from sqlbench.questions.lint import lint_files
 from sqlbench.questions.model import Question, Status, load_question, question_paths
+from sqlbench.questions.verify import Choice, ReviewTools, inspect_question, review_drafts
 from sqlbench.schema.spec import load_schema
 from sqlbench.settings import MissingEnvError
 from sqlbench.warehouses.base import SessionContext, Warehouse, WarehouseName
@@ -345,3 +350,83 @@ def check_questions(
                 typer.echo(f"  {failure}", err=True)
     if failed_count:
         raise typer.Exit(code=1)
+
+
+def git_user_name() -> str:
+    completed = subprocess.run(
+        ["git", "config", "user.name"], capture_output=True, text=True, check=False
+    )
+    return completed.stdout.strip()
+
+
+def draft_paths(paths: list[Path]) -> list[Path]:
+    """Drafts, plus files that don't load, so they can be fixed in the review."""
+    drafts = []
+    for path in paths:
+        try:
+            status = load_question(path).status
+        except (OSError, ValueError, yaml.YAMLError):
+            status = Status.DRAFT
+        if status == Status.DRAFT:
+            drafts.append(path)
+    return drafts
+
+
+def prompt_choice(allowed: list[Choice]) -> Choice:
+    labels = {
+        Choice.VERIFY: "[v]erify",
+        Choice.EDIT: "[e]dit",
+        Choice.REJECT: "[r]eject",
+        Choice.SKIP: "[s]kip",
+        Choice.QUIT: "[q]uit",
+    }
+    text = " ".join(labels[choice] for choice in allowed)
+    while True:
+        answer = typer.prompt(text).strip().lower()
+        for choice in allowed:
+            if answer == choice.value:
+                return choice
+        typer.echo(f"choose one of: {', '.join(choice.value for choice in allowed)}")
+
+
+def open_in_editor(path: Path) -> None:
+    """Open the file in $VISUAL or $EDITOR and wait for the editor to exit."""
+    editor = os.environ.get("VISUAL") or os.environ.get("EDITOR") or "vi"
+    subprocess.run([*shlex.split(editor), str(path)], check=False)
+
+
+@questions_app.command("verify")
+def verify_questions(
+    schema: Annotated[str, typer.Option(help="Schema whose drafts to review.")],
+    yes: Annotated[bool, typer.Option("--yes", help="Skip the cost confirmation.")] = False,
+    questions_dir: Annotated[Path, typer.Option("--dir")] = QUESTIONS_DIR,
+    schemas_dir: Annotated[Path, typer.Option("--schemas-dir")] = SCHEMAS_DIR,
+) -> None:
+    """Review draft questions one at a time: verify, edit, reject or skip."""
+    verifier = git_user_name()
+    if not verifier:
+        typer.echo("set git config user.name; verify records it as verified_by", err=True)
+        raise typer.Exit(code=1)
+    drafts = draft_paths(question_paths(questions_dir, schema))
+    if not drafts:
+        typer.echo("no draft questions")
+        return
+    # Each edit runs the golds again, so this is the cost of one pass.
+    confirm_query_cost(len(drafts), yes)
+
+    with gold_targets(schema) as targets:
+        tools = ReviewTools(
+            inspect=lambda path: inspect_question(path, schemas_dir, targets),
+            choose=prompt_choice,
+            edit=open_in_editor,
+            show=typer.echo,
+        )
+        try:
+            counts = review_drafts(drafts, tools, verifier, datetime.date.today())
+        except MissingEnvError as error:
+            typer.echo(str(error), err=True)
+            raise typer.Exit(code=1) from error
+    typer.echo(
+        f"verified {counts[Choice.VERIFY]}, rejected {counts[Choice.REJECT]}, "
+        f"skipped {counts[Choice.SKIP]}"
+    )
