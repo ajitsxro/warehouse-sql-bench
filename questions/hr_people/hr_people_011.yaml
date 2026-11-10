@@ -25,4 +25,6 @@ gold_sql:
     GROUP BY UPPER(TRIM(review_period))
 order_matters: false
 float_tolerance: 1e-05
-status: draft
+status: verified
+verified_by: "ajitsxro"
+verified_at: 2026-11-10

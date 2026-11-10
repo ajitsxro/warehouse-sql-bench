@@ -31,4 +31,6 @@ gold_sql:
     GROUP BY DATEDIFF(year, e.hire_date, DATE '2024-06-30')
 order_matters: false
 float_tolerance: 0
-status: draft
+status: verified
+verified_by: "ajitsxro"
+verified_at: 2026-11-10
