@@ -14,7 +14,72 @@
         "nulls",
         "boundary_dates",
         "messy_strings"
-      ]
+      ],
+      "columns": {
+        "customer_id": {
+          "nulls": 0,
+          "total": "45150",
+          "distinct": 300,
+          "min": null,
+          "max": null
+        },
+        "email": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "full_name": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "country": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "city": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "segment": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "signup_date": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2021-01-01",
+          "max": "2024-12-31"
+        },
+        "marketing_opt_in": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "loyalty_tier": {
+          "nulls": 104,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "products": {
       "rows": 150,
@@ -25,7 +90,79 @@
         "semi_structured",
         "messy_strings",
         "ties"
-      ]
+      ],
+      "columns": {
+        "product_id": {
+          "nulls": 0,
+          "total": "11325",
+          "distinct": 150,
+          "min": null,
+          "max": null
+        },
+        "sku": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "product_name": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "category": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "brand": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "list_price": {
+          "nulls": 0,
+          "total": "5941.66",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "launched_on": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2018-01-05",
+          "max": "2024-12-31"
+        },
+        "is_active": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "tags": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "specs": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "orders": {
       "rows": 600,
@@ -37,7 +174,65 @@
         "semi_structured",
         "messy_strings",
         "ties"
-      ]
+      ],
+      "columns": {
+        "order_id": {
+          "nulls": 0,
+          "total": "180300",
+          "distinct": 600,
+          "min": null,
+          "max": null
+        },
+        "customer_id": {
+          "nulls": 0,
+          "total": "85714",
+          "distinct": 186,
+          "min": null,
+          "max": null
+        },
+        "placed_at": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2022-01-02T16:52:58",
+          "max": "2024-12-30T14:58:56"
+        },
+        "status": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "shipped_at": {
+          "nulls": 60,
+          "total": null,
+          "distinct": null,
+          "min": "2022-01-07T20:36:14",
+          "max": "2025-01-02T06:36:38"
+        },
+        "ship_country": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "discount_pct": {
+          "nulls": 401,
+          "total": "3467.17",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "attributes": {
+          "nulls": 30,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "order_items": {
       "rows": 1500,
@@ -46,7 +241,51 @@
         "empty_groups",
         "nulls",
         "ties"
-      ]
+      ],
+      "columns": {
+        "order_item_id": {
+          "nulls": 0,
+          "total": "1125750",
+          "distinct": 1500,
+          "min": null,
+          "max": null
+        },
+        "order_id": {
+          "nulls": 0,
+          "total": "451387",
+          "distinct": 525,
+          "min": null,
+          "max": null
+        },
+        "product_id": {
+          "nulls": 0,
+          "total": "122143",
+          "distinct": 140,
+          "min": null,
+          "max": null
+        },
+        "quantity": {
+          "nulls": 0,
+          "total": "2521",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "unit_price": {
+          "nulls": 0,
+          "total": "70576.47",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "discount_amount": {
+          "nulls": 1212,
+          "total": "7388.26",
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "returns": {
       "rows": 150,
@@ -56,7 +295,51 @@
         "boundary_dates",
         "messy_strings",
         "ties"
-      ]
+      ],
+      "columns": {
+        "return_id": {
+          "nulls": 0,
+          "total": "11325",
+          "distinct": 150,
+          "min": null,
+          "max": null
+        },
+        "order_item_id": {
+          "nulls": 0,
+          "total": "113336",
+          "distinct": 144,
+          "min": null,
+          "max": null
+        },
+        "requested_at": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2022-01-12T02:33:11+00:00",
+          "max": "2025-01-30T02:57:49+00:00"
+        },
+        "reason": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "refund_amount": {
+          "nulls": 0,
+          "total": "5164.81",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "resolved_at": {
+          "nulls": 25,
+          "total": null,
+          "distinct": null,
+          "min": "2022-01-25T06:59:46+00:00",
+          "max": "2025-02-15T15:16:59+00:00"
+        }
+      }
     }
   }
 }

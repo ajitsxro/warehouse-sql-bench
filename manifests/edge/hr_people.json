@@ -12,7 +12,37 @@
       "injectors": [
         "empty_groups",
         "messy_strings"
-      ]
+      ],
+      "columns": {
+        "department_id": {
+          "nulls": 0,
+          "total": "78",
+          "distinct": 12,
+          "min": null,
+          "max": null
+        },
+        "department_name": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "cost_center": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "location": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "employees": {
       "rows": 400,
@@ -23,7 +53,72 @@
         "boundary_dates",
         "semi_structured",
         "messy_strings"
-      ]
+      ],
+      "columns": {
+        "employee_id": {
+          "nulls": 0,
+          "total": "80200",
+          "distinct": 400,
+          "min": null,
+          "max": null
+        },
+        "manager_id": {
+          "nulls": 20,
+          "total": "6585",
+          "distinct": 55,
+          "min": null,
+          "max": null
+        },
+        "department_id": {
+          "nulls": 0,
+          "total": "2699",
+          "distinct": 11,
+          "min": null,
+          "max": null
+        },
+        "full_name": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "job_title": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "employment_type": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "hire_date": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2010-01-03",
+          "max": "2024-12-31"
+        },
+        "termination_date": {
+          "nulls": 320,
+          "total": null,
+          "distinct": null,
+          "min": "2011-12-13",
+          "max": "2027-03-07"
+        },
+        "skills": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "compensation_history": {
       "rows": 1912,
@@ -32,7 +127,65 @@
         "nulls",
         "messy_strings",
         "ties"
-      ]
+      ],
+      "columns": {
+        "compensation_id": {
+          "nulls": 0,
+          "total": "1902482",
+          "distinct": 1912,
+          "min": null,
+          "max": null
+        },
+        "employee_id": {
+          "nulls": 0,
+          "total": "385327",
+          "distinct": 379,
+          "min": null,
+          "max": null
+        },
+        "valid_from": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2005-06-26",
+          "max": "2024-12-30"
+        },
+        "valid_to": {
+          "nulls": 379,
+          "total": null,
+          "distinct": null,
+          "min": "2007-06-26",
+          "max": "2024-12-30"
+        },
+        "base_salary": {
+          "nulls": 0,
+          "total": "164121510.87",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "bonus_target_pct": {
+          "nulls": 757,
+          "total": "19922.13",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "currency": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "job_level": {
+          "nulls": 0,
+          "total": "8678",
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "reviews": {
       "rows": 1500,
@@ -43,7 +196,58 @@
         "semi_structured",
         "messy_strings",
         "ties"
-      ]
+      ],
+      "columns": {
+        "review_id": {
+          "nulls": 0,
+          "total": "1125750",
+          "distinct": 1500,
+          "min": null,
+          "max": null
+        },
+        "employee_id": {
+          "nulls": 0,
+          "total": "296200",
+          "distinct": 372,
+          "min": null,
+          "max": null
+        },
+        "reviewer_id": {
+          "nulls": 0,
+          "total": "320434",
+          "distinct": 257,
+          "min": null,
+          "max": null
+        },
+        "review_period": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "submitted_at": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2023-07-01T04:23:30+00:00",
+          "max": "2025-01-30T12:47:39+00:00"
+        },
+        "rating": {
+          "nulls": 116,
+          "total": "4554",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "scores": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     }
   }
 }

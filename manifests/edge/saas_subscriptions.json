@@ -14,7 +14,51 @@
         "semi_structured",
         "messy_strings",
         "ties"
-      ]
+      ],
+      "columns": {
+        "plan_id": {
+          "nulls": 0,
+          "total": "78",
+          "distinct": 12,
+          "min": null,
+          "max": null
+        },
+        "plan_name": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "billing_period": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "tier_rank": {
+          "nulls": 0,
+          "total": "43",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "list_price": {
+          "nulls": 0,
+          "total": "3514",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "included_features": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "accounts": {
       "rows": 300,
@@ -24,7 +68,58 @@
         "boundary_dates",
         "messy_strings",
         "ties"
-      ]
+      ],
+      "columns": {
+        "account_id": {
+          "nulls": 0,
+          "total": "45150",
+          "distinct": 300,
+          "min": null,
+          "max": null
+        },
+        "company_name": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "industry": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "country": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "employee_band": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "created_at": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2020-01-02T15:39:11+00:00",
+          "max": "2024-11-03T06:00:00+00:00"
+        },
+        "account_owner": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "subscriptions": {
       "rows": 400,
@@ -34,7 +129,58 @@
         "nulls",
         "boundary_dates",
         "ties"
-      ]
+      ],
+      "columns": {
+        "subscription_id": {
+          "nulls": 0,
+          "total": "80200",
+          "distinct": 400,
+          "min": null,
+          "max": null
+        },
+        "account_id": {
+          "nulls": 0,
+          "total": "70983",
+          "distinct": 140,
+          "min": null,
+          "max": null
+        },
+        "plan_id": {
+          "nulls": 0,
+          "total": "2501",
+          "distinct": 11,
+          "min": null,
+          "max": null
+        },
+        "started_at": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2020-01-03T19:51:11+00:00",
+          "max": "2024-12-30T04:34:25+00:00"
+        },
+        "ended_at": {
+          "nulls": 179,
+          "total": null,
+          "distinct": null,
+          "min": "2020-01-17T01:31:38+00:00",
+          "max": "2027-05-04T13:47:33+00:00"
+        },
+        "seats": {
+          "nulls": 0,
+          "total": "5434",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "discount_pct": {
+          "nulls": 303,
+          "total": "2067.53",
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "invoices": {
       "rows": 800,
@@ -44,7 +190,65 @@
         "boundary_dates",
         "messy_strings",
         "ties"
-      ]
+      ],
+      "columns": {
+        "invoice_id": {
+          "nulls": 0,
+          "total": "320400",
+          "distinct": 800,
+          "min": null,
+          "max": null
+        },
+        "subscription_id": {
+          "nulls": 0,
+          "total": "162962",
+          "distinct": 341,
+          "min": null,
+          "max": null
+        },
+        "issued_at": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2020-01-04T05:25:45+00:00",
+          "max": "2024-12-29T18:39:16+00:00"
+        },
+        "due_at": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2020-01-06T21:59:47+00:00",
+          "max": "2025-01-24T18:55:54+00:00"
+        },
+        "paid_at": {
+          "nulls": 82,
+          "total": null,
+          "distinct": null,
+          "min": "2020-01-11T00:11:18+00:00",
+          "max": "2025-02-19T18:44:38+00:00"
+        },
+        "amount": {
+          "nulls": 0,
+          "total": "641259.04",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "tax_amount": {
+          "nulls": 251,
+          "total": "29892.17",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "currency": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "usage_events": {
       "rows": 1515,
@@ -56,7 +260,44 @@
         "messy_strings",
         "ties",
         "duplicates"
-      ]
+      ],
+      "columns": {
+        "account_id": {
+          "nulls": 0,
+          "total": "247689",
+          "distinct": 219,
+          "min": null,
+          "max": null
+        },
+        "event_ts": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2023-01-01T05:52:40+00:00",
+          "max": "2024-12-30T17:58:37+00:00"
+        },
+        "event_type": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "quantity": {
+          "nulls": 0,
+          "total": "8309",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "payload": {
+          "nulls": 76,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     }
   }
 }

@@ -9,22 +9,219 @@
     "sites": {
       "rows": 80,
       "sha256": "1069822c8d00f91fcdfaf8e0db55e1abcd20e675d3d814844ff7a4f4033b979a",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "site_id": {
+          "nulls": 0,
+          "total": "3240",
+          "distinct": 80,
+          "min": null,
+          "max": null
+        },
+        "site_name": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "region": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "timezone": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "opened_on": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2015-01-06",
+          "max": "2023-12-31"
+        },
+        "location": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "devices": {
       "rows": 1000,
       "sha256": "6cb8f72d9e9469e583b811b3e89523868591a98a0e3fe96ab92dbf47d31692d9",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "device_id": {
+          "nulls": 0,
+          "total": "500500",
+          "distinct": 1000,
+          "min": null,
+          "max": null
+        },
+        "site_id": {
+          "nulls": 0,
+          "total": "49544",
+          "distinct": 78,
+          "min": null,
+          "max": null
+        },
+        "device_type": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "model": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "firmware_version": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "installed_at": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2021-01-02T13:28:56+00:00",
+          "max": "2024-02-28T17:16:11+00:00"
+        },
+        "decommissioned_at": {
+          "nulls": 866,
+          "total": null,
+          "distinct": null,
+          "min": "2021-05-16T01:01:42+00:00",
+          "max": "2026-07-31T16:09:03+00:00"
+        },
+        "attributes": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "readings": {
       "rows": 500000,
       "sha256": "6e5baad47eb4b7149cf6d8d9426e326366a4387f2f80343401f71b14ac6bdc02",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "device_id": {
+          "nulls": 0,
+          "total": "250054899",
+          "distinct": 1000,
+          "min": null,
+          "max": null
+        },
+        "reading_ts": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2024-02-27T18:46:48+00:00",
+          "max": "2024-03-30T23:58:56+00:00"
+        },
+        "sensor_values": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "battery_pct": {
+          "nulls": 150461,
+          "total": "17492047",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "signal_dbm": {
+          "nulls": 0,
+          "total": "-35015228",
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "status": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     },
     "alerts": {
       "rows": 40000,
       "sha256": "fba5b9dd414471888916bf15caf9c5a609e5da6986f9c72a4aed02833eeb1a02",
-      "injectors": []
+      "injectors": [],
+      "columns": {
+        "alert_id": {
+          "nulls": 0,
+          "total": "800020000",
+          "distinct": 40000,
+          "min": null,
+          "max": null
+        },
+        "device_id": {
+          "nulls": 0,
+          "total": "19324981",
+          "distinct": 981,
+          "min": null,
+          "max": null
+        },
+        "raised_at": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": "2024-01-01T00:00:53+00:00",
+          "max": "2024-03-30T23:55:42+00:00"
+        },
+        "resolved_at": {
+          "nulls": 5990,
+          "total": null,
+          "distinct": null,
+          "min": "2024-01-01T02:56:53+00:00",
+          "max": "2024-04-02T21:25:45+00:00"
+        },
+        "severity": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "alert_type": {
+          "nulls": 0,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        },
+        "details": {
+          "nulls": 2091,
+          "total": null,
+          "distinct": null,
+          "min": null,
+          "max": null
+        }
+      }
     }
   }
 }
