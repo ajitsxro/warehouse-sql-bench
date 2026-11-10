@@ -10,10 +10,12 @@ from databricks.sql.exc import Error as DatabricksError
 
 from sqlbench.settings import require_env
 from sqlbench.warehouses.base import (
+    SESSION_TIME_ZONE,
     Column,
     ErrorCategory,
     QueryError,
     QueryResult,
+    SessionContext,
     WarehouseName,
     rows_from_arrow,
 )
@@ -42,15 +44,25 @@ def categorize_databricks_error(error: DatabricksError) -> ErrorCategory:
     return category_from_sqlstate(match.group(1))
 
 
-def connect_from_env() -> DatabricksConnection:
+def connect_from_env(context: SessionContext) -> DatabricksConnection:
     env = require_env(ENV_VARS)
-    return databricks_sql.connect(
+    connection = databricks_sql.connect(
         server_hostname=env["DATABRICKS_SERVER_HOSTNAME"],
         http_path=env["DATABRICKS_HTTP_PATH"],
         access_token=env["DATABRICKS_TOKEN"],
+        catalog=context.database,
+        schema=context.schema,
         _retry_stop_after_attempts_count=CONNECT_RETRY_ATTEMPTS,
         _retry_stop_after_attempts_duration=CONNECT_RETRY_BUDGET_S,
     )
+    pin_time_zone(connection)
+    return connection
+
+
+def pin_time_zone(connection: DatabricksConnection) -> None:
+    """Databricks takes the time zone from a session statement, not a connect argument."""
+    with connection.cursor() as cursor:
+        cursor.execute(f"SET TIME ZONE '{SESSION_TIME_ZONE}'")
 
 
 class DatabricksWarehouse:
@@ -58,7 +70,12 @@ class DatabricksWarehouse:
 
     name = WarehouseName.DATABRICKS
 
-    def __init__(self, connect: Callable[[], DatabricksConnection] = connect_from_env) -> None:
+    def __init__(
+        self,
+        context: SessionContext | None = None,
+        connect: Callable[[SessionContext], DatabricksConnection] = connect_from_env,
+    ) -> None:
+        self._context = context or SessionContext()
         self._connect = connect
         self._connection: DatabricksConnection | None = None
         self._session_timeout_s: int | None = None
@@ -72,7 +89,7 @@ class DatabricksWarehouse:
         deadline: Deadline | None = None
         try:
             if self._connection is None:
-                self._connection = self._connect()
+                self._connection = self._connect(self._context)
             with self._connection.cursor() as cursor:
                 server_timeout_s = int(timeout_s) + SERVER_TIMEOUT_MARGIN_S
                 if self._session_timeout_s != server_timeout_s:

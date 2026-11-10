@@ -5,10 +5,12 @@ import time
 import duckdb
 
 from sqlbench.warehouses.base import (
+    SESSION_TIME_ZONE,
     Column,
     ErrorCategory,
     QueryError,
     QueryResult,
+    SessionContext,
     WarehouseName,
     rows_from_arrow,
 )
@@ -38,14 +40,28 @@ def categorize_duckdb_error(error: duckdb.Error) -> ErrorCategory:
 
 
 class DuckDBWarehouse:
-    """Runs queries on a DuckDB connection. Pass one in to query tables you created."""
+    """Runs queries on a DuckDB connection. Pass one in to query tables you created.
+
+    The context's database is an attached DuckDB database, such as the file
+    stem of sqlbench.duckdb.
+    """
 
     name = WarehouseName.DUCKDB
 
-    def __init__(self, connection: duckdb.DuckDBPyConnection | None = None) -> None:
+    def __init__(
+        self,
+        connection: duckdb.DuckDBPyConnection | None = None,
+        context: SessionContext | None = None,
+    ) -> None:
         if connection is None:
             connection = duckdb.connect()
         self._connection = connection
+        connection.execute(f"SET TimeZone = '{SESSION_TIME_ZONE}'")
+        context = context or SessionContext()
+        names = [name for name in (context.database, context.schema) if name is not None]
+        if names:
+            # Quoted, so names like ecommerce__edge are used exactly as written.
+            connection.execute("USE " + ".".join(f'"{name}"' for name in names))
 
     def execute(self, sql: str, timeout_s: int) -> QueryResult:
         rejection = check_read_only(sql, self.name)
