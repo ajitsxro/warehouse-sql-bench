@@ -25,4 +25,6 @@ gold_sql:
     GROUP BY CAST(DATE_TRUNC('month', o.placed_at) AS DATE)
 order_matters: false
 float_tolerance: 0
-status: draft
+status: verified
+verified_by: "ajitsxro"
+verified_at: 2026-11-10

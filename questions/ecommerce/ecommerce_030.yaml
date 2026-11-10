@@ -26,4 +26,6 @@ gold_sql:
       AND exists(CAST(o.attributes:items AS ARRAY<VARIANT>), line -> line:qty::INT >= 4)
 order_matters: false
 float_tolerance: 0
-status: draft
+status: verified
+verified_by: "ajitsxro"
+verified_at: 2026-11-10

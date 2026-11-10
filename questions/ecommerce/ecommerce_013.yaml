@@ -36,4 +36,6 @@ gold_sql:
     ORDER BY order_date
 order_matters: true
 float_tolerance: 0
-status: draft
+status: verified
+verified_by: "ajitsxro"
+verified_at: 2026-11-10

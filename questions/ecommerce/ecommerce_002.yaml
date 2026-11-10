@@ -23,4 +23,6 @@ gold_sql:
       AND o.placed_at < TIMESTAMP '2025-01-01 00:00:00'
 order_matters: false
 float_tolerance: 0
-status: draft
+status: verified
+verified_by: "ajitsxro"
+verified_at: 2026-11-10

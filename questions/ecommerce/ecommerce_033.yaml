@@ -55,4 +55,6 @@ gold_sql:
     GROUP BY YEAR(GREATEST(lo.last_order_at, lr.last_return_at))
 order_matters: false
 float_tolerance: 0
-status: draft
+status: verified
+verified_by: "ajitsxro"
+verified_at: 2026-11-10

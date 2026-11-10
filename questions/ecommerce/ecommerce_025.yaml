@@ -38,4 +38,6 @@ gold_sql:
       AND array_size(CAST(o.attributes:items AS ARRAY<VARIANT>)) <> COALESCE(i.item_rows, 0)
 order_matters: false
 float_tolerance: 0
-status: draft
+status: verified
+verified_by: "ajitsxro"
+verified_at: 2026-11-10
