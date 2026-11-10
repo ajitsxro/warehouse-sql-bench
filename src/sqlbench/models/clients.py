@@ -26,6 +26,10 @@ OLLAMA_DEFAULT_BASE_URL = "http://localhost:11434/v1"
 REQUEST_TIMEOUT_S = 600.0
 # Rate limits, request timeouts, conflicts and server errors are worth retrying.
 RETRYABLE_STATUS_CODES = frozenset({408, 409, 429})
+# A 429 that means the account is out of credit, not that it's going too fast.
+QUOTA_EXHAUSTED_CODES = frozenset({"insufficient_quota"})
+# A provider asking to wait longer than this is out of quota for the day.
+LONGEST_RETRY_WAIT_S = 60.0
 
 
 @dataclass(frozen=True)
@@ -53,6 +57,35 @@ class ModelClient(Protocol):
 
 def is_retryable_status(status_code: int) -> bool:
     return status_code in RETRYABLE_STATUS_CODES or status_code >= 500
+
+
+def openai_retryable(error: openai.APIStatusError) -> bool:
+    if getattr(error, "code", None) in QUOTA_EXHAUSTED_CODES:
+        return False
+    return is_retryable_status(error.status_code)
+
+
+def gemini_retry_delay_s(details: Any) -> float | None:
+    """The wait a Gemini error asks for (RetryInfo retryDelay such as '31256s'), if any."""
+    if not isinstance(details, dict):
+        return None
+    error = details.get("error")
+    entries = error.get("details", []) if isinstance(error, dict) else []
+    for entry in entries:
+        delay = entry.get("retryDelay") if isinstance(entry, dict) else None
+        if isinstance(delay, str) and delay.endswith("s"):
+            try:
+                return float(delay[:-1])
+            except ValueError:
+                return None
+    return None
+
+
+def gemini_retryable(error: genai_errors.APIError) -> bool:
+    delay = gemini_retry_delay_s(error.details)
+    if delay is not None and delay > LONGEST_RETRY_WAIT_S:
+        return False
+    return is_retryable_status(error.code)
 
 
 class AnthropicClient:
@@ -113,7 +146,7 @@ class OpenAICompatibleClient:
                 **options,
             )
         except openai.APIStatusError as error:
-            raise ProviderError(str(error), is_retryable_status(error.status_code)) from error
+            raise ProviderError(str(error), openai_retryable(error)) from error
         except openai.APIConnectionError as error:
             raise ProviderError(str(error), retryable=True) from error
         choice = response.choices[0]
@@ -164,7 +197,7 @@ class GeminiClient:
                 model=self._config.model, contents=prompt, config=settings
             )
         except genai_errors.APIError as error:
-            raise ProviderError(str(error), is_retryable_status(error.code)) from error
+            raise ProviderError(str(error), gemini_retryable(error)) from error
         usage = response.usage_metadata
         input_tokens = (usage.prompt_token_count or 0) if usage else 0
         output_tokens = 0
