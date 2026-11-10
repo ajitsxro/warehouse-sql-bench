@@ -18,4 +18,6 @@ gold_sql:
     WHERE scores['leadership']::INT = 5
 order_matters: false
 float_tolerance: 0
-status: draft
+status: verified
+verified_by: "ajitsxro"
+verified_at: 2026-11-10

@@ -22,4 +22,6 @@ gold_sql:
     WHERE review_id BETWEEN 1 AND 20
 order_matters: false
 float_tolerance: 0
-status: draft
+status: verified
+verified_by: "ajitsxro"
+verified_at: 2026-11-10

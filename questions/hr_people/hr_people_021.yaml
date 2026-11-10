@@ -23,4 +23,6 @@ gold_sql:
     GROUP BY competency
 order_matters: false
 float_tolerance: 1e-06
-status: draft
+status: verified
+verified_by: "ajitsxro"
+verified_at: 2026-11-10

@@ -36,4 +36,6 @@ gold_sql:
       AND (termination_date IS NULL OR termination_date >= DATE '2024-01-01')
 order_matters: false
 float_tolerance: 0
-status: draft
+status: verified
+verified_by: "ajitsxro"
+verified_at: 2026-11-10
