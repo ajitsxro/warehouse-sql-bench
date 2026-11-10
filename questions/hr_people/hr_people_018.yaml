@@ -1,8 +1,9 @@
 id: hr_people_018
 schema: hr_people
 question: >-
-  How many employees list 0, 1, 2, 3 or 4 skills? Return the number of skills
-  listed and the number of employees.
+  For each number of skills that occurs, how many employees list that many?
+  Leave out numbers no employee has. Return the number of skills listed and
+  the number of employees.
 category: portable
 divergence: none
 features: [array_fn, aggregate]

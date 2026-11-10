@@ -1,8 +1,9 @@
 id: hr_people_022
 schema: hr_people
 question: >-
-  How many reviews score 0, 1, 2, 3 or 4 competencies? Return the number of
-  scored competencies and the number of reviews.
+  For each number of scored competencies that occurs, how many reviews score
+  that many? Leave out numbers no review has. Return the number of scored
+  competencies and the number of reviews.
 category: dialect_sensitive
 divergence: syntax
 divergence_note: >-
