@@ -175,25 +175,44 @@ def find_column_order(
 
     predicted_width may exceed gold_width (the extra-columns diagnostic picks
     a subset). Above max_permuted gold columns only gold's own order is
-    tried. Each gold column's candidates are the predicted columns whose
-    values alone match it, which prunes the search before rows are compared.
+    tried.
+    """
+
+    def column_ok(gold_index: int, predicted_index: int) -> bool:
+        return rows_match(column(gold, gold_index), column(predicted, predicted_index), rules)
+
+    def rows_ok(order: tuple[int, ...]) -> bool:
+        return rows_match(gold, project(predicted, order), rules)
+
+    return search_column_order(gold_width, predicted_width, column_ok, rows_ok, max_permuted)
+
+
+def search_column_order(
+    gold_width: int,
+    predicted_width: int,
+    column_ok: Callable[[int, int], bool],
+    rows_ok: Callable[[tuple[int, ...]], bool],
+    max_permuted: int = MAX_PERMUTED_COLUMNS,
+) -> tuple[int, ...] | None:
+    """The first assignment of predicted columns to gold columns that rows_ok accepts.
+
+    A predicted column is a candidate for a gold column only if column_ok
+    holds for the pair, which prunes the search before whole rows are
+    compared. The same position is tried first, so an already-aligned
+    result is found at once.
     """
     if gold_width > max_permuted:
         identity = tuple(range(gold_width))
-        if predicted_width == gold_width and rows_match(gold, predicted, rules):
+        if predicted_width == gold_width and rows_ok(identity):
             return identity
         return None
 
     candidates: list[list[int]] = []
     for gold_index in range(gold_width):
-        gold_column = column(gold, gold_index)
-        matching = []
-        # The same position first, so an already-aligned result is found at once.
         order = [gold_index] + [i for i in range(predicted_width) if i != gold_index]
+        matching = []
         for predicted_index in order:
-            if predicted_index >= predicted_width:
-                continue
-            if rows_match(gold_column, column(predicted, predicted_index), rules):
+            if predicted_index < predicted_width and column_ok(gold_index, predicted_index):
                 matching.append(predicted_index)
         if not matching:
             return None
@@ -204,9 +223,7 @@ def find_column_order(
     def search(gold_index: int) -> tuple[int, ...] | None:
         if gold_index == gold_width:
             order = tuple(chosen)
-            if rows_match(gold, project(predicted, order), rules):
-                return order
-            return None
+            return order if rows_ok(order) else None
         for predicted_index in candidates[gold_index]:
             if predicted_index in chosen:
                 continue
