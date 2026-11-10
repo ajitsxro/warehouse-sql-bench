@@ -1,0 +1,28 @@
+id: ecommerce_005
+schema: ecommerce
+question: >-
+  For each customer segment (trimmed, lower-cased), how many customers have
+  never placed an order? List every segment, with 0 where all of its customers
+  have ordered.
+category: portable
+divergence: none
+features: [join, aggregate, null_handling, subquery, string_fn]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT LOWER(TRIM(c.segment)) AS segment,
+           SUM(CASE WHEN o.customer_id IS NULL THEN 1 ELSE 0 END) AS customers_without_orders
+    FROM customers AS c
+    LEFT JOIN (SELECT DISTINCT customer_id FROM orders) AS o
+      ON o.customer_id = c.customer_id
+    GROUP BY LOWER(TRIM(c.segment))
+  databricks: |
+    SELECT LOWER(TRIM(c.segment)) AS segment,
+           SUM(CASE WHEN o.customer_id IS NULL THEN 1 ELSE 0 END) AS customers_without_orders
+    FROM customers AS c
+    LEFT JOIN (SELECT DISTINCT customer_id FROM orders) AS o
+      ON o.customer_id = c.customer_id
+    GROUP BY LOWER(TRIM(c.segment))
+order_matters: false
+float_tolerance: 0
+status: draft

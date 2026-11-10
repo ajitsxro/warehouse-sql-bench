@@ -1,0 +1,24 @@
+id: ecommerce_004
+schema: ecommerce
+question: >-
+  How many customers are in each loyalty tier? Report tier names trimmed and
+  lower-cased, and count customers who never joined the loyalty program (no
+  tier) under 'none'.
+category: portable
+divergence: none
+features: [aggregate, null_handling, string_fn]
+difficulty: easy
+gold_sql:
+  snowflake: |
+    SELECT COALESCE(LOWER(TRIM(loyalty_tier)), 'none') AS loyalty_tier,
+           COUNT(*) AS customers
+    FROM customers
+    GROUP BY COALESCE(LOWER(TRIM(loyalty_tier)), 'none')
+  databricks: |
+    SELECT COALESCE(LOWER(TRIM(loyalty_tier)), 'none') AS loyalty_tier,
+           COUNT(*) AS customers
+    FROM customers
+    GROUP BY COALESCE(LOWER(TRIM(loyalty_tier)), 'none')
+order_matters: false
+float_tolerance: 0
+status: draft

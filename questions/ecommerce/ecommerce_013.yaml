@@ -1,0 +1,39 @@
+id: ecommerce_013
+schema: ecommerce
+question: >-
+  For each day of January 2024 (UTC) with at least one ordered item, report
+  the date, that day's item revenue (quantity times unit_price minus
+  discount_amount, a missing discount meaning none) and the running total of
+  revenue from January 1 through that day, in date order.
+category: portable
+divergence: none
+features: [cte, join, aggregate, window, date_math]
+difficulty: hard
+gold_sql:
+  snowflake: |
+    WITH daily AS (
+        SELECT CAST(o.placed_at AS DATE) AS order_date, SUM(oi.quantity * oi.unit_price - COALESCE(oi.discount_amount, 0)) AS revenue
+        FROM orders AS o
+        JOIN order_items AS oi ON oi.order_id = o.order_id
+        WHERE o.placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+          AND o.placed_at < TIMESTAMP '2024-02-01 00:00:00'
+        GROUP BY CAST(o.placed_at AS DATE)
+    )
+    SELECT order_date, revenue, SUM(revenue) OVER (ORDER BY order_date) AS running_revenue
+    FROM daily
+    ORDER BY order_date
+  databricks: |
+    WITH daily AS (
+        SELECT CAST(o.placed_at AS DATE) AS order_date, SUM(oi.quantity * oi.unit_price - COALESCE(oi.discount_amount, 0)) AS revenue
+        FROM orders AS o
+        JOIN order_items AS oi ON oi.order_id = o.order_id
+        WHERE o.placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+          AND o.placed_at < TIMESTAMP '2024-02-01 00:00:00'
+        GROUP BY CAST(o.placed_at AS DATE)
+    )
+    SELECT order_date, revenue, SUM(revenue) OVER (ORDER BY order_date) AS running_revenue
+    FROM daily
+    ORDER BY order_date
+order_matters: true
+float_tolerance: 0
+status: draft

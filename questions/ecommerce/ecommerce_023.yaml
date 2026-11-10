@@ -1,0 +1,31 @@
+id: ecommerce_023
+schema: ecommerce
+question: >-
+  What was the item revenue (quantity times unit_price minus discount_amount,
+  a missing discount meaning none) in each month of 2024 (UTC)? Label months
+  as 'YYYY-MM', for example '2024-03'.
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  Formatting a date: TO_CHAR with 'YYYY-MM' on Snowflake, date_format with
+  'yyyy-MM' on Databricks.
+features: [date_math, string_fn, join, aggregate]
+difficulty: easy
+gold_sql:
+  snowflake: |
+    SELECT TO_CHAR(o.placed_at, 'YYYY-MM') AS month, SUM(oi.quantity * oi.unit_price - COALESCE(oi.discount_amount, 0)) AS revenue
+    FROM orders AS o
+    JOIN order_items AS oi ON oi.order_id = o.order_id
+    WHERE o.placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND o.placed_at < TIMESTAMP '2025-01-01 00:00:00'
+    GROUP BY TO_CHAR(o.placed_at, 'YYYY-MM')
+  databricks: |
+    SELECT date_format(o.placed_at, 'yyyy-MM') AS month, SUM(oi.quantity * oi.unit_price - COALESCE(oi.discount_amount, 0)) AS revenue
+    FROM orders AS o
+    JOIN order_items AS oi ON oi.order_id = o.order_id
+    WHERE o.placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND o.placed_at < TIMESTAMP '2025-01-01 00:00:00'
+    GROUP BY date_format(o.placed_at, 'yyyy-MM')
+order_matters: false
+float_tolerance: 0
+status: draft

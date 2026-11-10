@@ -1,0 +1,35 @@
+id: ecommerce_012
+schema: ecommerce
+question: >-
+  How many customers placed at least one order in 2023 and at least one order
+  in 2024 (UTC)?
+category: portable
+divergence: none
+features: [set_operation, subquery, aggregate]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT COUNT(*) AS customers
+    FROM (
+        SELECT customer_id FROM orders
+        WHERE placed_at >= TIMESTAMP '2023-01-01 00:00:00'
+          AND placed_at < TIMESTAMP '2024-01-01 00:00:00'
+        INTERSECT
+        SELECT customer_id FROM orders
+        WHERE placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+          AND placed_at < TIMESTAMP '2025-01-01 00:00:00'
+    ) AS both_years
+  databricks: |
+    SELECT COUNT(*) AS customers
+    FROM (
+        SELECT customer_id FROM orders
+        WHERE placed_at >= TIMESTAMP '2023-01-01 00:00:00'
+          AND placed_at < TIMESTAMP '2024-01-01 00:00:00'
+        INTERSECT
+        SELECT customer_id FROM orders
+        WHERE placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+          AND placed_at < TIMESTAMP '2025-01-01 00:00:00'
+    ) AS both_years
+order_matters: false
+float_tolerance: 0
+status: draft

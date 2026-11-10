@@ -1,0 +1,42 @@
+id: ecommerce_008
+schema: ecommerce
+question: >-
+  For delivered orders (status 'delivered' after trimming and lower-casing),
+  what is the average order value per ship country (trimmed, upper-cased)? An
+  order's value is the sum over its items of quantity times unit_price minus
+  discount_amount, where a missing discount means none. Orders without items
+  are left out.
+category: portable
+divergence: none
+features: [cte, join, aggregate, null_handling, string_fn]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    WITH order_values AS (
+        SELECT o.order_id,
+               UPPER(TRIM(o.ship_country)) AS ship_country,
+               SUM(oi.quantity * oi.unit_price - COALESCE(oi.discount_amount, 0)) AS order_value
+        FROM orders AS o
+        JOIN order_items AS oi ON oi.order_id = o.order_id
+        WHERE LOWER(TRIM(o.status)) = 'delivered'
+        GROUP BY o.order_id, UPPER(TRIM(o.ship_country))
+    )
+    SELECT ship_country, AVG(order_value) AS avg_order_value
+    FROM order_values
+    GROUP BY ship_country
+  databricks: |
+    WITH order_values AS (
+        SELECT o.order_id,
+               UPPER(TRIM(o.ship_country)) AS ship_country,
+               SUM(oi.quantity * oi.unit_price - COALESCE(oi.discount_amount, 0)) AS order_value
+        FROM orders AS o
+        JOIN order_items AS oi ON oi.order_id = o.order_id
+        WHERE LOWER(TRIM(o.status)) = 'delivered'
+        GROUP BY o.order_id, UPPER(TRIM(o.ship_country))
+    )
+    SELECT ship_country, AVG(order_value) AS avg_order_value
+    FROM order_values
+    GROUP BY ship_country
+order_matters: false
+float_tolerance: 0.01
+status: draft

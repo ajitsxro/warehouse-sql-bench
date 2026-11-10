@@ -1,0 +1,27 @@
+id: ecommerce_024
+schema: ecommerce
+question: >-
+  For products launched in November 2024, give each product's tags as one
+  comma-separated string in alphabetical order, without spaces (an empty
+  string when it has no tags). Return product_id and the tag string.
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  Joining array elements into a string: ARRAY_TO_STRING on Snowflake,
+  array_join on Databricks.
+features: [array_fn, string_fn]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT product_id, ARRAY_TO_STRING(ARRAY_SORT(tags), ',') AS tag_list
+    FROM products
+    WHERE launched_on >= DATE '2024-11-01'
+      AND launched_on < DATE '2024-12-01'
+  databricks: |
+    SELECT product_id, array_join(array_sort(tags), ',') AS tag_list
+    FROM products
+    WHERE launched_on >= DATE '2024-11-01'
+      AND launched_on < DATE '2024-12-01'
+order_matters: false
+float_tolerance: 0
+status: draft

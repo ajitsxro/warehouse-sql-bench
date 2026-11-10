@@ -1,0 +1,32 @@
+id: ecommerce_027
+schema: ecommerce
+question: >-
+  For each order placed on 2024-02-29 (UTC) that has items, list the
+  product_ids of its items as an array sorted in ascending order, keeping
+  duplicates. Return order_id and the array.
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  An ordered array aggregate: ARRAY_AGG ... WITHIN GROUP (ORDER BY ...) on
+  Snowflake; array_sort(collect_list(...)) on Databricks.
+features: [array_fn, aggregate, join]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT o.order_id,
+           ARRAY_AGG(oi.product_id) WITHIN GROUP (ORDER BY oi.product_id) AS product_ids
+    FROM orders AS o
+    JOIN order_items AS oi ON oi.order_id = o.order_id
+    WHERE o.placed_at >= TIMESTAMP '2024-02-29 00:00:00'
+      AND o.placed_at < TIMESTAMP '2024-03-01 00:00:00'
+    GROUP BY o.order_id
+  databricks: |
+    SELECT o.order_id, array_sort(collect_list(oi.product_id)) AS product_ids
+    FROM orders AS o
+    JOIN order_items AS oi ON oi.order_id = o.order_id
+    WHERE o.placed_at >= TIMESTAMP '2024-02-29 00:00:00'
+      AND o.placed_at < TIMESTAMP '2024-03-01 00:00:00'
+    GROUP BY o.order_id
+order_matters: false
+float_tolerance: 0
+status: draft

@@ -1,0 +1,36 @@
+id: ecommerce_021
+schema: ecommerce
+question: >-
+  Each order's attributes payload holds a cart snapshot in items, an array of
+  objects with sku and qty. Across orders placed in 2024 (UTC), which 10 SKUs
+  have the highest total cart quantity? Break ties by SKU in ascending order.
+  Return the SKU and the total quantity, highest first.
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  Expanding a JSON array into rows: LATERAL FLATTEN on Snowflake,
+  variant_explode on Databricks.
+features: [flatten_explode, semi_structured_path, aggregate]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT f.value:sku::STRING AS sku, SUM(f.value:qty::INT) AS quantity
+    FROM orders AS o,
+         LATERAL FLATTEN(input => o.attributes:items) AS f
+    WHERE o.placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND o.placed_at < TIMESTAMP '2025-01-01 00:00:00'
+    GROUP BY f.value:sku::STRING
+    ORDER BY quantity DESC, sku
+    LIMIT 10
+  databricks: |
+    SELECT f.value:sku::STRING AS sku, SUM(f.value:qty::INT) AS quantity
+    FROM orders AS o,
+         LATERAL variant_explode(o.attributes:items) AS f
+    WHERE o.placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND o.placed_at < TIMESTAMP '2025-01-01 00:00:00'
+    GROUP BY f.value:sku::STRING
+    ORDER BY quantity DESC, sku
+    LIMIT 10
+order_matters: true
+float_tolerance: 0
+status: draft

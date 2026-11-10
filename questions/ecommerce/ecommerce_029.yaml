@@ -1,0 +1,23 @@
+id: ecommerce_029
+schema: ecommerce
+question: >-
+  How many products are tagged 'eco' or 'limited' (at least one of the two)?
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  Array literals differ: ARRAY_CONSTRUCT on Snowflake, array on Databricks
+  (ARRAYS_OVERLAP exists on both).
+features: [array_fn, aggregate]
+difficulty: easy
+gold_sql:
+  snowflake: |
+    SELECT COUNT(*) AS products
+    FROM products
+    WHERE ARRAYS_OVERLAP(tags, ARRAY_CONSTRUCT('eco', 'limited'))
+  databricks: |
+    SELECT COUNT(*) AS products
+    FROM products
+    WHERE arrays_overlap(tags, array('eco', 'limited'))
+order_matters: false
+float_tolerance: 0
+status: draft

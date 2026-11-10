@@ -1,0 +1,29 @@
+id: ecommerce_034
+schema: ecommerce
+question: >-
+  How many orders were placed in 2024 (UTC) on each day of the week? Number
+  the days 1 = Sunday through 7 = Saturday, and return the day number and the
+  number of orders.
+category: dialect_sensitive
+divergence: semantics
+divergence_note: >-
+  DAYOFWEEK numbers Sunday 0 to Saturday 6 on Snowflake (default WEEK_START)
+  but Sunday 1 to Saturday 7 on Databricks (probe dayofweek).
+features: [date_math, aggregate]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT MOD(DAYOFWEEKISO(o.placed_at), 7) + 1 AS day_number, COUNT(*) AS orders
+    FROM orders AS o
+    WHERE o.placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND o.placed_at < TIMESTAMP '2025-01-01 00:00:00'
+    GROUP BY MOD(DAYOFWEEKISO(o.placed_at), 7) + 1
+  databricks: |
+    SELECT DAYOFWEEK(o.placed_at) AS day_number, COUNT(*) AS orders
+    FROM orders AS o
+    WHERE o.placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND o.placed_at < TIMESTAMP '2025-01-01 00:00:00'
+    GROUP BY DAYOFWEEK(o.placed_at)
+order_matters: false
+float_tolerance: 0
+status: draft

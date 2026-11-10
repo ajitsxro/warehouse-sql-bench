@@ -1,0 +1,29 @@
+id: ecommerce_014
+schema: ecommerce
+question: >-
+  For returns requested in 2024 (UTC), report per reason (trimmed, lower-
+  cased) the number of returns and the total refund amount.
+category: portable
+divergence: none
+features: [aggregate, string_fn]
+difficulty: easy
+gold_sql:
+  snowflake: |
+    SELECT LOWER(TRIM(reason)) AS reason,
+           COUNT(*) AS returns,
+           SUM(refund_amount) AS refunded
+    FROM returns
+    WHERE requested_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND requested_at < TIMESTAMP '2025-01-01 00:00:00'
+    GROUP BY LOWER(TRIM(reason))
+  databricks: |
+    SELECT LOWER(TRIM(reason)) AS reason,
+           COUNT(*) AS returns,
+           SUM(refund_amount) AS refunded
+    FROM returns
+    WHERE requested_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND requested_at < TIMESTAMP '2025-01-01 00:00:00'
+    GROUP BY LOWER(TRIM(reason))
+order_matters: false
+float_tolerance: 0
+status: draft

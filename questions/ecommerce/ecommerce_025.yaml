@@ -1,0 +1,41 @@
+id: ecommerce_025
+schema: ecommerce
+question: >-
+  Among orders placed in 2024 (UTC) whose attributes payload has an items
+  array (the cart snapshot), how many have a different number of cart lines
+  than rows in order_items? An order with no order_items rows has 0 rows.
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  Length of a JSON array: ARRAY_SIZE accepts a VARIANT on Snowflake;
+  Databricks needs the VARIANT cast to ARRAY<VARIANT> first.
+features: [semi_structured_path, array_fn, cte, join, null_handling]
+difficulty: hard
+gold_sql:
+  snowflake: |
+    WITH item_counts AS (
+        SELECT order_id, COUNT(*) AS item_rows
+        FROM order_items
+        GROUP BY order_id
+    )
+    SELECT COUNT(*) AS orders
+    FROM orders AS o
+    LEFT JOIN item_counts AS i ON i.order_id = o.order_id
+    WHERE o.placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND o.placed_at < TIMESTAMP '2025-01-01 00:00:00'
+      AND ARRAY_SIZE(o.attributes:items) <> COALESCE(i.item_rows, 0)
+  databricks: |
+    WITH item_counts AS (
+        SELECT order_id, COUNT(*) AS item_rows
+        FROM order_items
+        GROUP BY order_id
+    )
+    SELECT COUNT(*) AS orders
+    FROM orders AS o
+    LEFT JOIN item_counts AS i ON i.order_id = o.order_id
+    WHERE o.placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND o.placed_at < TIMESTAMP '2025-01-01 00:00:00'
+      AND array_size(CAST(o.attributes:items AS ARRAY<VARIANT>)) <> COALESCE(i.item_rows, 0)
+order_matters: false
+float_tolerance: 0
+status: draft

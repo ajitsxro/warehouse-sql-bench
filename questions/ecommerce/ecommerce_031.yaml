@@ -1,0 +1,28 @@
+id: ecommerce_031
+schema: ecommerce
+question: >-
+  Which 10 orders have the highest discount_pct? Orders without a discount are
+  not part of the ranking. Break ties by the lower order_id. Return order_id
+  and discount_pct, highest first.
+category: dialect_sensitive
+divergence: semantics
+divergence_note: >-
+  ORDER BY ... DESC puts NULLs first on Snowflake and last on Databricks, so
+  an unfiltered descending top 10 returns orders without a discount on
+  Snowflake (probe null_order_desc).
+features: [null_handling]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT order_id, discount_pct
+    FROM orders
+    ORDER BY discount_pct DESC NULLS LAST, order_id
+    LIMIT 10
+  databricks: |
+    SELECT order_id, discount_pct
+    FROM orders
+    ORDER BY discount_pct DESC, order_id
+    LIMIT 10
+order_matters: true
+float_tolerance: 0
+status: draft

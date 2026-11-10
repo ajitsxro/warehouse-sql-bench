@@ -1,0 +1,20 @@
+id: ecommerce_003
+schema: ecommerce
+question: >-
+  How many orders have no shipment time recorded (shipped_at is missing)?
+category: portable
+divergence: none
+features: [aggregate, null_handling]
+difficulty: easy
+gold_sql:
+  snowflake: |
+    SELECT COUNT(*) AS orders
+    FROM orders
+    WHERE shipped_at IS NULL
+  databricks: |
+    SELECT COUNT(*) AS orders
+    FROM orders
+    WHERE shipped_at IS NULL
+order_matters: false
+float_tolerance: 0
+status: draft

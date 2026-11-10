@@ -1,0 +1,26 @@
+id: ecommerce_002
+schema: ecommerce
+question: >-
+  What was the total item revenue of orders placed in 2024 (UTC)? An item's
+  revenue is quantity times unit_price minus discount_amount, where a missing
+  discount_amount means no discount. Include orders of every status.
+category: portable
+divergence: none
+features: [join, aggregate, null_handling]
+difficulty: easy
+gold_sql:
+  snowflake: |
+    SELECT SUM(oi.quantity * oi.unit_price - COALESCE(oi.discount_amount, 0)) AS revenue
+    FROM order_items AS oi
+    JOIN orders AS o ON o.order_id = oi.order_id
+    WHERE o.placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND o.placed_at < TIMESTAMP '2025-01-01 00:00:00'
+  databricks: |
+    SELECT SUM(oi.quantity * oi.unit_price - COALESCE(oi.discount_amount, 0)) AS revenue
+    FROM order_items AS oi
+    JOIN orders AS o ON o.order_id = oi.order_id
+    WHERE o.placed_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND o.placed_at < TIMESTAMP '2025-01-01 00:00:00'
+order_matters: false
+float_tolerance: 0
+status: draft

@@ -1,0 +1,30 @@
+id: ecommerce_035
+schema: ecommerce
+question: >-
+  A customer's first loyalty renewal is due one month after their signup date:
+  on the same day number in the next month, or on that month's last day if the
+  day number doesn't exist there (2024-01-31 renews on 2024-02-29, and
+  2024-02-29 renews on 2024-03-29). For customers who signed up from
+  2024-01-28 through 2024-04-30, how many renewals fall on each date?
+category: dialect_sensitive
+divergence: semantics
+divergence_note: >-
+  ADD_MONTHS keeps a month-end date at month end on Snowflake (2024-02-29 + 1
+  month = 2024-03-31) but keeps the day number on Databricks (2024-03-29)
+  (probe add_months_feb29).
+features: [date_math, aggregate]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT DATEADD(month, 1, signup_date) AS renewal_date, COUNT(*) AS customers
+    FROM customers
+    WHERE signup_date BETWEEN DATE '2024-01-28' AND DATE '2024-04-30'
+    GROUP BY DATEADD(month, 1, signup_date)
+  databricks: |
+    SELECT ADD_MONTHS(signup_date, 1) AS renewal_date, COUNT(*) AS customers
+    FROM customers
+    WHERE signup_date BETWEEN DATE '2024-01-28' AND DATE '2024-04-30'
+    GROUP BY ADD_MONTHS(signup_date, 1)
+order_matters: false
+float_tolerance: 0
+status: draft
