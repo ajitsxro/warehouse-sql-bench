@@ -1,0 +1,26 @@
+id: hr_people_023
+schema: hr_people
+question: >-
+  How many employees were hired in each month of 2024? Label months as 'YYYY-
+  MM', for example '2024-03'.
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  Formatting a date: TO_CHAR with 'YYYY-MM' on Snowflake, date_format with
+  'yyyy-MM' on Databricks.
+features: [date_math, string_fn, aggregate]
+difficulty: easy
+gold_sql:
+  snowflake: |
+    SELECT TO_CHAR(hire_date, 'YYYY-MM') AS month, COUNT(*) AS hires
+    FROM employees
+    WHERE hire_date >= DATE '2024-01-01' AND hire_date < DATE '2025-01-01'
+    GROUP BY TO_CHAR(hire_date, 'YYYY-MM')
+  databricks: |
+    SELECT date_format(hire_date, 'yyyy-MM') AS month, COUNT(*) AS hires
+    FROM employees
+    WHERE hire_date >= DATE '2024-01-01' AND hire_date < DATE '2025-01-01'
+    GROUP BY date_format(hire_date, 'yyyy-MM')
+order_matters: false
+float_tolerance: 0
+status: draft

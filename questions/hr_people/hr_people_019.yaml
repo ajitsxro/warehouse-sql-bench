@@ -1,0 +1,26 @@
+id: hr_people_019
+schema: hr_people
+question: >-
+  How many employees list each skill? An employee who lists the same skill
+  twice counts once.
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  Expanding an array into rows: LATERAL FLATTEN on Snowflake, explode on
+  Databricks.
+features: [flatten_explode, aggregate, distinct]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT f.value::STRING AS skill, COUNT(DISTINCT e.employee_id) AS employees
+    FROM employees AS e,
+         LATERAL FLATTEN(input => e.skills) AS f
+    GROUP BY f.value::STRING
+  databricks: |
+    SELECT skill, COUNT(DISTINCT employee_id) AS employees
+    FROM employees
+    LATERAL VIEW explode(skills) t AS skill
+    GROUP BY skill
+order_matters: false
+float_tolerance: 0
+status: draft

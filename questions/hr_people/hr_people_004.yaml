@@ -1,0 +1,28 @@
+id: hr_people_004
+schema: hr_people
+question: >-
+  Which 5 managers have the most direct reports? Break ties by the lower
+  employee_id. Return the manager's employee_id, full_name and number of
+  direct reports, most first.
+category: portable
+divergence: none
+features: [self_join, aggregate]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT m.employee_id, m.full_name, COUNT(*) AS direct_reports
+    FROM employees AS e
+    JOIN employees AS m ON m.employee_id = e.manager_id
+    GROUP BY m.employee_id, m.full_name
+    ORDER BY direct_reports DESC, m.employee_id
+    LIMIT 5
+  databricks: |
+    SELECT m.employee_id, m.full_name, COUNT(*) AS direct_reports
+    FROM employees AS e
+    JOIN employees AS m ON m.employee_id = e.manager_id
+    GROUP BY m.employee_id, m.full_name
+    ORDER BY direct_reports DESC, m.employee_id
+    LIMIT 5
+order_matters: true
+float_tolerance: 0
+status: draft

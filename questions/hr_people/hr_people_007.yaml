@@ -1,0 +1,40 @@
+id: hr_people_007
+schema: hr_people
+question: >-
+  For each direct report of employee 1, how many people are in their part of
+  the organization, counting the direct report and everyone below them through
+  manager links? Return the direct report's employee_id and that count.
+category: portable
+divergence: none
+features: [recursive_cte, aggregate]
+difficulty: hard
+gold_sql:
+  snowflake: |
+    WITH RECURSIVE tree (top_id, employee_id) AS (
+        SELECT employee_id, employee_id
+        FROM employees
+        WHERE manager_id = 1
+        UNION ALL
+        SELECT t.top_id, e.employee_id
+        FROM employees AS e
+        JOIN tree AS t ON e.manager_id = t.employee_id
+    )
+    SELECT top_id AS direct_report_id, COUNT(*) AS organization_size
+    FROM tree
+    GROUP BY top_id
+  databricks: |
+    WITH RECURSIVE tree (top_id, employee_id) AS (
+        SELECT employee_id, employee_id
+        FROM employees
+        WHERE manager_id = 1
+        UNION ALL
+        SELECT t.top_id, e.employee_id
+        FROM employees AS e
+        JOIN tree AS t ON e.manager_id = t.employee_id
+    )
+    SELECT top_id AS direct_report_id, COUNT(*) AS organization_size
+    FROM tree
+    GROUP BY top_id
+order_matters: false
+float_tolerance: 0
+status: draft

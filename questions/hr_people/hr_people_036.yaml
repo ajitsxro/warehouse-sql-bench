@@ -1,0 +1,33 @@
+id: hr_people_036
+schema: hr_people
+question: >-
+  For current compensation rows (valid_to missing) at job level 8 paid in USD
+  (currency trimmed and upper-cased), count rows per salary band, where the
+  band is the base salary in thousands with the remainder dropped (84999.99 is
+  band 84).
+category: dialect_sensitive
+divergence: semantics
+divergence_note: >-
+  CAST of a decimal to INT rounds half up on Snowflake but truncates on
+  Databricks, so CAST(base_salary / 1000 AS INT) puts 84999.99 in band 85 on
+  Snowflake (probe cast_decimal_int).
+features: [aggregate, null_handling, string_fn]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT TRUNC(base_salary / 1000) AS band, COUNT(*) AS compensation_rows
+    FROM compensation_history
+    WHERE valid_to IS NULL
+      AND job_level = 8
+      AND UPPER(TRIM(currency)) = 'USD'
+    GROUP BY TRUNC(base_salary / 1000)
+  databricks: |
+    SELECT CAST(base_salary / 1000 AS INT) AS band, COUNT(*) AS compensation_rows
+    FROM compensation_history
+    WHERE valid_to IS NULL
+      AND job_level = 8
+      AND UPPER(TRIM(currency)) = 'USD'
+    GROUP BY CAST(base_salary / 1000 AS INT)
+order_matters: false
+float_tolerance: 0
+status: draft

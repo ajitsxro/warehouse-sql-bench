@@ -1,0 +1,28 @@
+id: hr_people_011
+schema: hr_people
+question: >-
+  For each review period (trimmed, upper-cased, such as '2024-H1'), report the
+  number of reviews, how many have no overall rating, and the average rating
+  of the rated reviews.
+category: portable
+divergence: none
+features: [aggregate, null_handling, string_fn]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT UPPER(TRIM(review_period)) AS review_period,
+           COUNT(*) AS reviews,
+           COUNT(*) - COUNT(rating) AS unrated,
+           AVG(rating) AS avg_rating
+    FROM reviews
+    GROUP BY UPPER(TRIM(review_period))
+  databricks: |
+    SELECT UPPER(TRIM(review_period)) AS review_period,
+           COUNT(*) AS reviews,
+           COUNT(*) - COUNT(rating) AS unrated,
+           AVG(rating) AS avg_rating
+    FROM reviews
+    GROUP BY UPPER(TRIM(review_period))
+order_matters: false
+float_tolerance: 1e-05
+status: draft

@@ -1,0 +1,23 @@
+id: hr_people_020
+schema: hr_people
+question: >-
+  How many employees list 'sql' among their skills?
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  ARRAY_CONTAINS takes (value, array) on Snowflake, with the value as a
+  VARIANT, and (array, value) on Databricks.
+features: [array_fn, aggregate]
+difficulty: easy
+gold_sql:
+  snowflake: |
+    SELECT COUNT(*) AS employees
+    FROM employees
+    WHERE ARRAY_CONTAINS('sql'::VARIANT, skills)
+  databricks: |
+    SELECT COUNT(*) AS employees
+    FROM employees
+    WHERE array_contains(skills, 'sql')
+order_matters: false
+float_tolerance: 0
+status: draft

@@ -1,0 +1,30 @@
+id: hr_people_027
+schema: hr_people
+question: >-
+  How many reviews that score at least one competency have every competency
+  score at 4 or higher?
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  Testing every map value: LATERAL FLATTEN with a HAVING on Snowflake; forall
+  over map_values on Databricks.
+features: [flatten_explode, higher_order_fn, struct_map_access, aggregate, having, subquery]
+difficulty: hard
+gold_sql:
+  snowflake: |
+    SELECT COUNT(*) AS reviews
+    FROM (
+        SELECT r.review_id
+        FROM reviews AS r,
+             LATERAL FLATTEN(input => r.scores) AS f
+        GROUP BY r.review_id
+        HAVING MIN(f.value::INT) >= 4
+    ) AS high_scores
+  databricks: |
+    SELECT COUNT(*) AS reviews
+    FROM reviews
+    WHERE size(scores) > 0
+      AND forall(map_values(scores), score -> score >= 4)
+order_matters: false
+float_tolerance: 0
+status: draft

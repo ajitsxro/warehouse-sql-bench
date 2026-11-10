@@ -1,0 +1,34 @@
+id: hr_people_030
+schema: hr_people
+question: >-
+  For each department_id with employees, return an object that maps each
+  employment type (trimmed, lower-cased) to the number of employees of that
+  type in the department.
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  Aggregating key/value pairs into one object: OBJECT_AGG on Snowflake,
+  map_from_entries(collect_list(struct(...))) on Databricks.
+features: [struct_map_access, aggregate, subquery]
+difficulty: hard
+gold_sql:
+  snowflake: |
+    SELECT department_id, OBJECT_AGG(employment_type, headcount::VARIANT) AS by_type
+    FROM (
+        SELECT department_id, LOWER(TRIM(employment_type)) AS employment_type, COUNT(*) AS headcount
+        FROM employees
+        GROUP BY department_id, LOWER(TRIM(employment_type))
+    ) AS counts
+    GROUP BY department_id
+  databricks: |
+    SELECT department_id,
+           map_from_entries(collect_list(struct(employment_type, headcount))) AS by_type
+    FROM (
+        SELECT department_id, LOWER(TRIM(employment_type)) AS employment_type, COUNT(*) AS headcount
+        FROM employees
+        GROUP BY department_id, LOWER(TRIM(employment_type))
+    ) AS counts
+    GROUP BY department_id
+order_matters: false
+float_tolerance: 0
+status: draft

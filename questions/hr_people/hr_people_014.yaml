@@ -1,0 +1,23 @@
+id: hr_people_014
+schema: hr_people
+question: >-
+  How many reviews were written by the reviewed employee's own manager, as
+  recorded in employees.manager_id?
+category: portable
+divergence: none
+features: [join, aggregate]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT COUNT(*) AS reviews
+    FROM reviews AS r
+    JOIN employees AS e ON e.employee_id = r.employee_id
+    WHERE r.reviewer_id = e.manager_id
+  databricks: |
+    SELECT COUNT(*) AS reviews
+    FROM reviews AS r
+    JOIN employees AS e ON e.employee_id = r.employee_id
+    WHERE r.reviewer_id = e.manager_id
+order_matters: false
+float_tolerance: 0
+status: draft

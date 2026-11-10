@@ -1,0 +1,23 @@
+id: hr_people_008
+schema: hr_people
+question: >-
+  For each currency (trimmed, upper-cased), what is the average current base
+  salary? A compensation row is current when valid_to is missing.
+category: portable
+divergence: none
+features: [aggregate, null_handling, string_fn]
+difficulty: easy
+gold_sql:
+  snowflake: |
+    SELECT UPPER(TRIM(currency)) AS currency, AVG(base_salary) AS avg_base_salary
+    FROM compensation_history
+    WHERE valid_to IS NULL
+    GROUP BY UPPER(TRIM(currency))
+  databricks: |
+    SELECT UPPER(TRIM(currency)) AS currency, AVG(base_salary) AS avg_base_salary
+    FROM compensation_history
+    WHERE valid_to IS NULL
+    GROUP BY UPPER(TRIM(currency))
+order_matters: false
+float_tolerance: 0.01
+status: draft

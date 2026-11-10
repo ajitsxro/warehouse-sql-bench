@@ -1,0 +1,38 @@
+id: hr_people_032
+schema: hr_people
+question: >-
+  For each review period (trimmed, upper-cased), which review has the lowest
+  overall rating? Break ties by the lower review_id; reviews without a rating
+  come after all rated reviews. Return the period, review_id and rating.
+category: dialect_sensitive
+divergence: semantics
+divergence_note: >-
+  Ascending ORDER BY puts NULLs last on Snowflake and first on Databricks, so
+  ROW_NUMBER() OVER (ORDER BY rating) picks an unrated review on Databricks
+  (probe null_order_asc).
+features: [window, null_handling, string_fn, subquery]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT review_period, review_id, rating
+    FROM (
+        SELECT UPPER(TRIM(review_period)) AS review_period,
+               review_id,
+               rating,
+               ROW_NUMBER() OVER (PARTITION BY UPPER(TRIM(review_period)) ORDER BY rating, review_id) AS position
+        FROM reviews
+    ) AS ranked
+    WHERE position = 1
+  databricks: |
+    SELECT review_period, review_id, rating
+    FROM (
+        SELECT UPPER(TRIM(review_period)) AS review_period,
+               review_id,
+               rating,
+               ROW_NUMBER() OVER (PARTITION BY UPPER(TRIM(review_period)) ORDER BY rating NULLS LAST, review_id) AS position
+        FROM reviews
+    ) AS ranked
+    WHERE position = 1
+order_matters: false
+float_tolerance: 0
+status: draft

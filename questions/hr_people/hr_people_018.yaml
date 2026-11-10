@@ -1,0 +1,21 @@
+id: hr_people_018
+schema: hr_people
+question: >-
+  How many employees list 0, 1, 2, 3 or 4 skills? Return the number of skills
+  listed and the number of employees.
+category: portable
+divergence: none
+features: [array_fn, aggregate]
+difficulty: easy
+gold_sql:
+  snowflake: |
+    SELECT ARRAY_SIZE(skills) AS skill_count, COUNT(*) AS employees
+    FROM employees
+    GROUP BY ARRAY_SIZE(skills)
+  databricks: |
+    SELECT ARRAY_SIZE(skills) AS skill_count, COUNT(*) AS employees
+    FROM employees
+    GROUP BY ARRAY_SIZE(skills)
+order_matters: false
+float_tolerance: 0
+status: draft

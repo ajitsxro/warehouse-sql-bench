@@ -1,0 +1,26 @@
+id: hr_people_021
+schema: hr_people
+question: >-
+  For each competency in reviews' scores (such as communication or
+  leadership), how many reviews score it and what is its average score?
+category: dialect_sensitive
+divergence: syntax
+divergence_note: >-
+  Expanding a map into key/value rows: LATERAL FLATTEN on Snowflake, explode
+  on Databricks.
+features: [flatten_explode, struct_map_access, aggregate]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT f.key AS competency, COUNT(*) AS reviews, AVG(f.value::INT) AS avg_score
+    FROM reviews AS r,
+         LATERAL FLATTEN(input => r.scores) AS f
+    GROUP BY f.key
+  databricks: |
+    SELECT competency, COUNT(*) AS reviews, AVG(score) AS avg_score
+    FROM reviews
+    LATERAL VIEW explode(scores) t AS competency, score
+    GROUP BY competency
+order_matters: false
+float_tolerance: 1e-06
+status: draft

@@ -1,0 +1,21 @@
+id: hr_people_001
+schema: hr_people
+question: >-
+  How many employees are there of each employment type? Report employment
+  types trimmed and lower-cased.
+category: portable
+divergence: none
+features: [aggregate, string_fn]
+difficulty: easy
+gold_sql:
+  snowflake: |
+    SELECT LOWER(TRIM(employment_type)) AS employment_type, COUNT(*) AS employees
+    FROM employees
+    GROUP BY LOWER(TRIM(employment_type))
+  databricks: |
+    SELECT LOWER(TRIM(employment_type)) AS employment_type, COUNT(*) AS employees
+    FROM employees
+    GROUP BY LOWER(TRIM(employment_type))
+order_matters: false
+float_tolerance: 0
+status: draft

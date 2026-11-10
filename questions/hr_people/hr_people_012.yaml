@@ -1,0 +1,27 @@
+id: hr_people_012
+schema: hr_people
+question: >-
+  How many reviews were submitted in each month of 2024 (UTC)? Return the
+  first day of the month as a date and the number of reviews.
+category: portable
+divergence: none
+features: [aggregate, date_math]
+difficulty: easy
+gold_sql:
+  snowflake: |
+    SELECT CAST(DATE_TRUNC('month', submitted_at) AS DATE) AS month_start,
+           COUNT(*) AS reviews
+    FROM reviews
+    WHERE submitted_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND submitted_at < TIMESTAMP '2025-01-01 00:00:00'
+    GROUP BY CAST(DATE_TRUNC('month', submitted_at) AS DATE)
+  databricks: |
+    SELECT CAST(DATE_TRUNC('month', submitted_at) AS DATE) AS month_start,
+           COUNT(*) AS reviews
+    FROM reviews
+    WHERE submitted_at >= TIMESTAMP '2024-01-01 00:00:00'
+      AND submitted_at < TIMESTAMP '2025-01-01 00:00:00'
+    GROUP BY CAST(DATE_TRUNC('month', submitted_at) AS DATE)
+order_matters: false
+float_tolerance: 0
+status: draft

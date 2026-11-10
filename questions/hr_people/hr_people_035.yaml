@@ -1,0 +1,39 @@
+id: hr_people_035
+schema: hr_people
+question: >-
+  How many person-days were employees employed during 2024 in total? An
+  employee is employed every day from hire_date through termination_date
+  inclusive, or through 2024-12-31 when there is no termination_date. Only
+  days in 2024 count.
+category: dialect_sensitive
+divergence: semantics
+divergence_note: >-
+  LEAST returns NULL when any argument is NULL on Snowflake but ignores NULLs
+  on Databricks, so LEAST(termination_date, '2024-12-31') drops current
+  employees on Snowflake (probe greatest_null).
+features: [date_math, null_handling, aggregate]
+difficulty: hard
+gold_sql:
+  snowflake: |
+    SELECT SUM(
+               DATEDIFF(day,
+                        GREATEST(hire_date, DATE '2024-01-01'),
+                        LEAST(COALESCE(termination_date, DATE '2024-12-31'), DATE '2024-12-31'))
+               + 1
+           ) AS person_days
+    FROM employees
+    WHERE hire_date <= DATE '2024-12-31'
+      AND (termination_date IS NULL OR termination_date >= DATE '2024-01-01')
+  databricks: |
+    SELECT SUM(
+               DATEDIFF(day,
+                        GREATEST(hire_date, DATE '2024-01-01'),
+                        LEAST(termination_date, DATE '2024-12-31'))
+               + 1
+           ) AS person_days
+    FROM employees
+    WHERE hire_date <= DATE '2024-12-31'
+      AND (termination_date IS NULL OR termination_date >= DATE '2024-01-01')
+order_matters: false
+float_tolerance: 0
+status: draft

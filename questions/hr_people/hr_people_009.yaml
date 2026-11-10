@@ -1,0 +1,26 @@
+id: hr_people_009
+schema: hr_people
+question: >-
+  How many employees had a compensation row in effect on 2024-06-30, per job
+  level? A row is in effect on a date when valid_from is on or before it and
+  valid_to is after it or missing (valid_to is exclusive).
+category: portable
+divergence: none
+features: [aggregate, null_handling, distinct, date_math]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT job_level, COUNT(DISTINCT employee_id) AS employees
+    FROM compensation_history
+    WHERE valid_from <= DATE '2024-06-30'
+      AND (valid_to > DATE '2024-06-30' OR valid_to IS NULL)
+    GROUP BY job_level
+  databricks: |
+    SELECT job_level, COUNT(DISTINCT employee_id) AS employees
+    FROM compensation_history
+    WHERE valid_from <= DATE '2024-06-30'
+      AND (valid_to > DATE '2024-06-30' OR valid_to IS NULL)
+    GROUP BY job_level
+order_matters: false
+float_tolerance: 0
+status: draft

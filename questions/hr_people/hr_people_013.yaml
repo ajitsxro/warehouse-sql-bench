@@ -1,0 +1,25 @@
+id: hr_people_013
+schema: hr_people
+question: >-
+  How many employees have never been reviewed (they never appear as the
+  reviewed employee in reviews)?
+category: portable
+divergence: none
+features: [subquery, aggregate]
+difficulty: medium
+gold_sql:
+  snowflake: |
+    SELECT COUNT(*) AS employees
+    FROM employees AS e
+    WHERE NOT EXISTS (
+        SELECT 1 FROM reviews AS r WHERE r.employee_id = e.employee_id
+    )
+  databricks: |
+    SELECT COUNT(*) AS employees
+    FROM employees AS e
+    WHERE NOT EXISTS (
+        SELECT 1 FROM reviews AS r WHERE r.employee_id = e.employee_id
+    )
+order_matters: false
+float_tolerance: 0
+status: draft
