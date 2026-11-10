@@ -29,6 +29,7 @@ from sqlbench.harness.run import (
     pending,
     question_set_sha256,
     run_tasks,
+    sample_per_schema,
     start_or_resume,
 )
 from sqlbench.harness.serialize import result_sha256
@@ -610,6 +611,9 @@ def run_benchmark(
     warehouses: Annotated[str, typer.Option(help="Comma-separated.")] = "snowflake,databricks",
     questions: Annotated[QuestionSet, typer.Option()] = QuestionSet.VERIFIED,
     limit: Annotated[int | None, typer.Option(help="At most this many questions.")] = None,
+    per_schema: Annotated[
+        int | None, typer.Option(help="This many questions per schema, picked by id hash.")
+    ] = None,
     run_id: Annotated[
         str | None, typer.Option(help="Resume this run instead of starting one.")
     ] = None,
@@ -636,6 +640,11 @@ def run_benchmark(
     )
     clean, _ = lint_and_load(question_paths(questions_dir), schemas_dir)
     picked = [(path, question) for path, question in clean if question.status in allowed]
+    if per_schema is not None:
+        sampled = {
+            question.id for question in sample_per_schema([q for _, q in picked], per_schema)
+        }
+        picked = [(path, question) for path, question in picked if question.id in sampled]
     if limit is not None:
         picked = picked[:limit]
     if not picked:

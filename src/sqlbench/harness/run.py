@@ -70,6 +70,22 @@ def data_manifest_sha256(manifest_dir: Path, schema_names: list[str]) -> str:
     return hashlib.sha256("\n".join(parts).encode()).hexdigest()
 
 
+def sample_per_schema(questions: list[Question], per_schema: int) -> list[Question]:
+    """per_schema questions from each schema, picked by the hash of their id.
+
+    Ids are numbered by category (portable first), so the first N would be
+    lopsided. Hash order mixes categories and is the same on every machine.
+    """
+    by_schema: dict[str, list[Question]] = {}
+    for question in questions:
+        by_schema.setdefault(question.schema_name, []).append(question)
+    picked = []
+    for schema_questions in by_schema.values():
+        ranked = sorted(schema_questions, key=lambda q: hashlib.sha256(q.id.encode()).hexdigest())
+        picked.extend(ranked[:per_schema])
+    return sorted(picked, key=lambda q: q.id)
+
+
 def build_tasks(
     models: list[ModelConfig],
     warehouses: list[WarehouseName],
