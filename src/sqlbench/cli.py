@@ -13,6 +13,7 @@ from sqlbench.datagen.tables import Profile
 from sqlbench.load.cost import load_cost_estimate
 from sqlbench.load.dataset import Loader, LoadError, load_dataset
 from sqlbench.load.duckdb_loader import DuckDBLoader
+from sqlbench.load.snowflake_loader import SnowflakeLoader
 from sqlbench.schema.spec import load_schema
 from sqlbench.settings import MissingEnvError
 from sqlbench.warehouses.base import Warehouse, WarehouseName
@@ -98,6 +99,8 @@ def chosen_profiles(profile: LoadProfile) -> list[Profile]:
 def open_loader(warehouse: WarehouseName, data_dir: Path) -> Loader:
     if warehouse == WarehouseName.DUCKDB:
         return DuckDBLoader(data_dir / DUCKDB_FILE_NAME)
+    if warehouse == WarehouseName.SNOWFLAKE:
+        return SnowflakeLoader()
     raise typer.BadParameter(f"no loader for {warehouse} yet")
 
 
@@ -174,7 +177,7 @@ def load_data(
 
     try:
         loader = open_loader(warehouse, data_dir)
-    except MissingEnvError as error:
+    except (LoadError, MissingEnvError) as error:
         typer.echo(f"{warehouse}: {error}", err=True)
         raise typer.Exit(code=1) from error
     try:
