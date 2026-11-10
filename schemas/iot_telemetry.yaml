@@ -1,0 +1,146 @@
+name: iot_telemetry
+description: >
+  Building sensors: sites have devices, devices send hourly readings and raise
+  alerts. Each device's readings form one hourly series that ends in the last
+  days of March 2024; a missing hour means the device did not report, and
+  outages can last up to 12 hours. Alert times and decommissioned_at are
+  generated independently of the readings, so an alert does not imply a
+  reading at that time and readings are not cut off at decommissioning.
+
+tables:
+  - name: sites
+    rows: 80
+    edge_rows: 80
+    primary_key: site_id
+    columns:
+      - {name: site_id, type: int, gen: {distribution: sequence}}
+      - {name: site_name, type: string, gen: {faker: city, cardinality: 80}}
+      - name: region
+        type: string
+        gen: {values: [north_america, europe, apac], weights: [50, 30, 20]}
+      - name: timezone
+        type: string
+        description: IANA name of the site's local time zone.
+        gen:
+          values: [America/New_York, America/Chicago, America/Los_Angeles,
+                   Europe/London, Europe/Berlin, Asia/Tokyo, Asia/Kolkata]
+          weights: [20, 15, 15, 12, 18, 10, 10]
+      - {name: opened_on, type: date, gen: {min: 2015-01-01, max: 2023-12-31}}
+      - name: location
+        type: struct<latitude:double,longitude:double>
+        gen:
+          shape:
+            type: object
+            fields:
+              latitude: {type: number, min: -45, max: 60, scale: 5}
+              longitude: {type: number, min: -125, max: 145, scale: 5}
+
+  - name: devices
+    rows: 1000
+    edge_rows: 200
+    primary_key: device_id
+    columns:
+      - {name: device_id, type: bigint, gen: {distribution: sequence}}
+      - name: site_id
+        type: int
+        references: sites.site_id
+        gen: {distribution: zipf, exponent: 1.1}
+      - name: device_type
+        type: string
+        gen:
+          values: [thermostat, air_quality, power_meter, vibration, water_leak]
+          weights: [30, 25, 20, 15, 10]
+      - {name: model, type: string, gen: {pattern: "??-###"}}
+      - {name: firmware_version, type: string, gen: {pattern: "#.#.##"}}
+      - {name: installed_at, type: timestamp_tz, gen: {min: 2021-01-01, max: 2024-02-29}}
+      - name: decommissioned_at
+        type: timestamp_tz
+        nullable: true
+        description: NULL while the device is in service.
+        gen: {after: installed_at, max_gap_days: 1000, null_rate: 0.85}
+      - name: attributes
+        type: map<string,string>
+        description: Free-form vendor attributes; keys vary by device.
+        gen:
+          shape:
+            type: object
+            fields:
+              vendor: {type: string, values: [acme, northwind, contoso, initech]}
+              protocol: {type: string, values: [mqtt, modbus, zigbee, lorawan]}
+              mounting: {type: string, values: [wall, ceiling, pipe, panel], optional: 0.4}
+              power: {type: string, values: [battery, mains, poe], optional: 0.2}
+
+  - name: readings
+    description: One row per device per reported hour. sensor_values holds one value per channel.
+    rows: 500000
+    edge_rows: 2000
+    series: {key: device_id, time: reading_ts, step: 1h, gap_rate: 0.03, max_gap_steps: 12}
+    columns:
+      - name: device_id
+        type: bigint
+        references: devices.device_id
+        gen: {distribution: uniform}
+      - {name: reading_ts, type: timestamp_tz, gen: {min: 2024-03-28, max: 2024-03-31}}
+      - name: sensor_values
+        type: array<double>
+        gen:
+          shape:
+            type: array
+            min_items: 1
+            max_items: 4
+            element: {type: number, min: -20, max: 120, scale: 3}
+      - name: battery_pct
+        type: int
+        nullable: true
+        description: NULL for mains-powered devices.
+        gen: {min: 0, max: 100, null_rate: 0.3}
+      - name: signal_dbm
+        type: int
+        gen: {distribution: normal, mean: -70, sigma: 10, min: -120, max: -30}
+      - name: status
+        type: string
+        gen: {values: [ok, degraded, error], weights: [92, 6, 2]}
+
+  - name: alerts
+    rows: 40000
+    edge_rows: 600
+    primary_key: alert_id
+    columns:
+      - {name: alert_id, type: bigint, gen: {distribution: sequence}}
+      - name: device_id
+        type: bigint
+        references: devices.device_id
+        gen: {distribution: zipf, exponent: 1.2}
+      - {name: raised_at, type: timestamp_tz, gen: {min: 2024-01-01, max: 2024-03-31}}
+      - name: resolved_at
+        type: timestamp_tz
+        nullable: true
+        description: NULL while the alert is open.
+        gen: {after: raised_at, max_gap_days: 3, null_rate: 0.15}
+      - name: severity
+        type: string
+        gen: {values: [info, warning, critical], weights: [55, 35, 10]}
+      - name: alert_type
+        type: string
+        gen:
+          values: [threshold, offline, low_battery, tamper, firmware]
+          weights: [45, 25, 15, 5, 10]
+      - name: details
+        type: variant
+        nullable: true
+        gen:
+          null_rate: 0.05
+          shape:
+            type: object
+            fields:
+              channel: {type: int, min: 0, max: 3}
+              threshold: {type: number, min: -10, max: 100, scale: 1, optional: 0.3}
+              observed: {type: number, min: -20, max: 120, scale: 3, optional: 0.3}
+              acknowledged_by:
+                type: string
+                values: [ops_oncall, facilities, vendor_support]
+                optional: 0.5
+              related_alerts:
+                type: array
+                max_items: 3
+                element: {type: int, min: 1, max: 40000}

@@ -1,0 +1,54 @@
+{
+  "schema_name": "iot_telemetry",
+  "profile": "edge",
+  "seed": 20261105,
+  "generator_version": 1,
+  "spec_sha256": "34231b810b3ac18d795b7681c2358a157f113d6ffeb406837644f2c79f2e6206",
+  "pyarrow_version": "26.0.0",
+  "tables": {
+    "sites": {
+      "rows": 80,
+      "sha256": "7ee102636958dd1b0893b9dc3bc6550531973ef061aeeaa4d6089196162424a2",
+      "injectors": [
+        "empty_groups",
+        "boundary_dates",
+        "semi_structured",
+        "messy_strings"
+      ]
+    },
+    "devices": {
+      "rows": 200,
+      "sha256": "75af420c717ee5ae6d16f0a20bef401331399b6428188416901af6e437188487",
+      "injectors": [
+        "empty_groups",
+        "nulls",
+        "boundary_dates",
+        "semi_structured",
+        "messy_strings",
+        "ties"
+      ]
+    },
+    "readings": {
+      "rows": 1922,
+      "sha256": "8130d5e09a49b73e3381288cb79ddd18efe0f4e90c00e2dcb9ddaccfa8f94823",
+      "injectors": [
+        "nulls",
+        "semi_structured",
+        "messy_strings",
+        "ties",
+        "duplicates"
+      ]
+    },
+    "alerts": {
+      "rows": 600,
+      "sha256": "667123197f9663d9bc1cb1270b9327cb2a14940fff47575ae9a677b49bdeb2f3",
+      "injectors": [
+        "nulls",
+        "boundary_dates",
+        "semi_structured",
+        "messy_strings",
+        "ties"
+      ]
+    }
+  }
+}
