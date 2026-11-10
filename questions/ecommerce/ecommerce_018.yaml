@@ -25,4 +25,6 @@ gold_sql:
     GROUP BY HOUR(CONVERT_TIMEZONE('UTC', 'America/New_York', o.placed_at))
 order_matters: false
 float_tolerance: 0
-status: draft
+status: verified
+verified_by: "ajitsxro"
+verified_at: 2026-11-10
