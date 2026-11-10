@@ -20,6 +20,7 @@ from sqlbench.harness.run import (
     pending,
     question_set_sha256,
     run_tasks,
+    sample_per_schema,
     start_or_resume,
 )
 from sqlbench.harness.store import ResultStore, RunInfo
@@ -291,3 +292,19 @@ def test_git_sha_names_the_commit() -> None:
     sha = git_sha(ROOT)
 
     assert len(sha.removesuffix("-dirty")) == 40
+
+
+def test_sampling_takes_the_same_mix_from_each_schema() -> None:
+    shop = [question(number) for number in range(1, 11)]
+    org = [
+        Question.model_validate(question_data(id=f"mini_org_{n:03d}", schema="mini_org"))
+        for n in range(1, 11)
+    ]
+
+    picked = sample_per_schema(shop + org, 3)
+
+    assert sum(1 for q in picked if q.schema_name == "mini_shop") == 3
+    assert sum(1 for q in picked if q.schema_name == "mini_org") == 3
+    assert picked == sample_per_schema(list(reversed(shop + org)), 3)
+    assert [q.id for q in picked] == sorted(q.id for q in picked)
+    assert [q.id for q in picked[:3]] != ["mini_org_001", "mini_org_002", "mini_org_003"]
