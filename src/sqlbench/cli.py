@@ -1,10 +1,11 @@
 """Command-line entry point for the benchmark."""
 
 import datetime
+import hashlib
 import os
 import shlex
 import subprocess
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from enum import StrEnum
 from pathlib import Path
@@ -17,6 +18,21 @@ from dotenv import load_dotenv
 
 from sqlbench.datagen.generator import generate_dataset
 from sqlbench.datagen.tables import Profile
+from sqlbench.harness.dry_run import DRY_RUN_MODEL, DryRunWarehouse, GoldAnsweringModel
+from sqlbench.harness.executor import Task, data_sha256
+from sqlbench.harness.run import (
+    DEFAULT_WORKERS_PER_WAREHOUSE,
+    RunError,
+    build_tasks,
+    data_manifest_sha256,
+    git_sha,
+    pending,
+    question_set_sha256,
+    run_tasks,
+    start_or_resume,
+)
+from sqlbench.harness.serialize import result_sha256
+from sqlbench.harness.store import ResultRow, ResultStore, RunInfo
 from sqlbench.load.check import check_dataset
 from sqlbench.load.cost import cost_estimate, query_cost_estimate
 from sqlbench.load.databricks_loader import DatabricksLoader
@@ -24,15 +40,29 @@ from sqlbench.load.dataset import Loader, LoadError, load_dataset, read_manifest
 from sqlbench.load.duckdb_loader import DuckDBLoader
 from sqlbench.load.snowflake_loader import SnowflakeLoader
 from sqlbench.models.cache import ResponseCache, cache_key
-from sqlbench.models.clients import PacedClient, ProviderError, RateLimiter, make_client
-from sqlbench.models.config import find_model, load_models
+from sqlbench.models.clients import (
+    ModelClient,
+    PacedClient,
+    ProviderError,
+    RateLimiter,
+    make_client,
+)
+from sqlbench.models.config import ModelConfig, find_model, load_models
 from sqlbench.models.generate import build_prompt, estimate_cost, generate
 from sqlbench.models.prompt import load_template
-from sqlbench.questions.check import GOLD_WAREHOUSES, PROFILES, GoldTargets, check_question
+from sqlbench.questions.check import (
+    GOLD_TIMEOUT_S,
+    GOLD_WAREHOUSES,
+    PROFILES,
+    GoldTargets,
+    check_question,
+)
 from sqlbench.questions.lint import lint_files
 from sqlbench.questions.model import Question, Status, load_question, question_paths
 from sqlbench.questions.verify import Choice, ReviewTools, inspect_question, review_drafts
 from sqlbench.schema.spec import load_schema
+from sqlbench.scoring import SCORER_VERSION
+from sqlbench.scoring.outcomes import Outcome, score_dataset
 from sqlbench.settings import MissingEnvError
 from sqlbench.warehouses.base import SessionContext, Warehouse, WarehouseName
 from sqlbench.warehouses.databricks_warehouse import DatabricksWarehouse
@@ -48,6 +78,8 @@ QUESTIONS_DIR = Path("questions")
 MODELS_FILE = Path("models.yaml")
 PROMPT_FILE = Path("prompts/v1.txt")
 RESPONSE_CACHE = Path("results/llm_cache.duckdb")
+RESULTS_FILE = Path("results/results.duckdb")
+DRY_RUN_RESULTS_FILE = Path("results/dry_run.duckdb")
 DEFAULT_SEED = 20261105
 DUCKDB_FILE_NAME = "sqlbench.duckdb"
 
@@ -523,4 +555,273 @@ def generate_sql(
         cache.close()
     typer.echo(f"spent ${total_cost:.4f}; {failures} provider errors")
     if failures:
+        raise typer.Exit(code=1)
+
+
+class QuestionSet(StrEnum):
+    VERIFIED = "verified"
+    # Verified and draft questions: for dry runs and trying the pipeline.
+    DRAFTS = "drafts"
+
+
+def parse_list(text: str) -> list[str]:
+    return [item.strip() for item in text.split(",") if item.strip()]
+
+
+def chosen_models(models_file: Path, models: str) -> list[ModelConfig]:
+    configured = load_models(models_file)
+    if models == "all":
+        return configured
+    return [find_model(configured, model_id) for model_id in parse_list(models)]
+
+
+def chosen_warehouses(warehouses: str) -> list[WarehouseName]:
+    chosen = [WarehouseName(name) for name in parse_list(warehouses)]
+    for warehouse in chosen:
+        if warehouse not in GOLD_WAREHOUSES:
+            typer.echo("questions have gold SQL for snowflake and databricks only", err=True)
+            raise typer.Exit(code=2)
+    return chosen
+
+
+def adapter_factory(
+    dry_run: bool, data_dir: Path
+) -> Callable[[WarehouseName, str, Profile], Warehouse]:
+    def open_adapter(warehouse: WarehouseName, schema_name: str, profile: Profile) -> Warehouse:
+        context = session_context(schema_name, profile)
+        if dry_run:
+            local = open_warehouse(WarehouseName.DUCKDB, context, data_dir)
+            return DryRunWarehouse(local, warehouse)
+        return open_warehouse(warehouse, context, data_dir)
+
+    return open_adapter
+
+
+def describe_row(row: ResultRow) -> str:
+    text = f"{row.model_id}/{row.warehouse}/{row.question_id}: {row.outcome}"
+    if row.lucky_match:
+        text += " (lucky: main correct, edge not)"
+    return text
+
+
+@app.command("run")
+def run_benchmark(
+    models: Annotated[str, typer.Option(help="all, or model ids separated by commas.")] = "all",
+    warehouses: Annotated[str, typer.Option(help="Comma-separated.")] = "snowflake,databricks",
+    questions: Annotated[QuestionSet, typer.Option()] = QuestionSet.VERIFIED,
+    limit: Annotated[int | None, typer.Option(help="At most this many questions.")] = None,
+    run_id: Annotated[
+        str | None, typer.Option(help="Resume this run instead of starting one.")
+    ] = None,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Local DuckDB and a gold-answering fake model.")
+    ] = False,
+    workers: Annotated[int, typer.Option(help="Worker threads per warehouse.")] = (
+        DEFAULT_WORKERS_PER_WAREHOUSE
+    ),
+    yes: Annotated[bool, typer.Option("--yes", help="Skip the cost confirmation.")] = False,
+    results_file: Annotated[Path | None, typer.Option()] = None,
+    models_file: Annotated[Path, typer.Option()] = MODELS_FILE,
+    prompt_file: Annotated[Path, typer.Option()] = PROMPT_FILE,
+    cache_file: Annotated[Path, typer.Option()] = RESPONSE_CACHE,
+    questions_dir: Annotated[Path, typer.Option("--dir")] = QUESTIONS_DIR,
+    schemas_dir: Annotated[Path, typer.Option("--schemas-dir")] = SCHEMAS_DIR,
+    data_dir: Annotated[Path, typer.Option()] = DATA_DIR,
+    manifest_dir: Annotated[Path, typer.Option()] = MANIFESTS_DIR,
+) -> None:
+    """Generate, execute and score every (model, warehouse, question); resumable by --run-id."""
+    chosen_houses = chosen_warehouses(warehouses)
+    allowed = (
+        {Status.VERIFIED} if questions == QuestionSet.VERIFIED else {Status.VERIFIED, Status.DRAFT}
+    )
+    clean, _ = lint_and_load(question_paths(questions_dir), schemas_dir)
+    picked = [(path, question) for path, question in clean if question.status in allowed]
+    if limit is not None:
+        picked = picked[:limit]
+    if not picked:
+        typer.echo(f"no {questions} questions to run")
+        raise typer.Exit(code=1)
+    asked = [question for _, question in picked]
+    schemas = {}
+    for question in asked:
+        if question.schema_name not in schemas:
+            schemas[question.schema_name] = load_schema(
+                schemas_dir / f"{question.schema_name}.yaml"
+            )
+
+    template = load_template(prompt_file)
+    run_models = [DRY_RUN_MODEL] if dry_run else chosen_models(models_file, models)
+    tasks = build_tasks(run_models, chosen_houses, asked, schemas, template, data_dir)
+    run = RunInfo(
+        run_id=run_id or datetime.datetime.now(datetime.UTC).strftime("%Y%m%dT%H%M%SZ"),
+        git_sha=git_sha(Path.cwd()),
+        prompt_sha256=template.sha256,
+        question_set_sha256=question_set_sha256([path for path, _ in picked]),
+        data_manifest_sha256=data_manifest_sha256(manifest_dir, list(schemas)),
+        scorer_version=SCORER_VERSION,
+        models=tuple(model.id for model in run_models),
+        warehouses=tuple(warehouse.value for warehouse in chosen_houses),
+    )
+
+    store = ResultStore(results_file or (DRY_RUN_RESULTS_FILE if dry_run else RESULTS_FILE))
+    cache = ResponseCache(":memory:" if dry_run else cache_file)
+    try:
+        try:
+            start_or_resume(store, run)
+        except RunError as error:
+            typer.echo(str(error), err=True)
+            raise typer.Exit(code=1) from error
+        todo = pending(store, run.run_id, tasks)
+        typer.echo(f"run {run.run_id}: {len(todo)} of {len(tasks)} tasks to do")
+        if not dry_run and todo:
+            confirm_run_cost(todo, run_models, chosen_houses, cache, yes)
+
+        clients: dict[str, ModelClient] = {}
+        if dry_run:
+            answers = {
+                task.prompt: task.question.gold_sql.for_warehouse(task.warehouse) for task in todo
+            }
+            clients[DRY_RUN_MODEL.id] = GoldAnsweringModel(answers)
+        else:
+            try:
+                for model in run_models:
+                    limiter = RateLimiter(model.requests_per_minute)
+                    clients[model.id] = PacedClient(make_client(model), limiter)
+            except MissingEnvError as error:
+                typer.echo(str(error), err=True)
+                raise typer.Exit(code=1) from error
+
+        summary = run_tasks(
+            todo,
+            run,
+            store,
+            cache,
+            template,
+            clients,
+            adapter_factory(dry_run, data_dir),
+            manifest_dir,
+            workers_per_warehouse=workers,
+            on_result=lambda row: typer.echo(describe_row(row)),
+        )
+        outcomes: dict[str, int] = {}
+        for row in store.results(run.run_id):
+            outcomes[row.outcome] = outcomes.get(row.outcome, 0) + 1
+    finally:
+        cache.close()
+        store.close()
+
+    typer.echo(f"stored {summary.stored} results, spent ${summary.cost_usd:.4f}")
+    typer.echo(
+        "outcomes so far: "
+        + ", ".join(f"{name} {count}" for name, count in sorted(outcomes.items()))
+    )
+    if summary.failures:
+        typer.echo(f"{len(summary.failures)} tasks failed and were not stored:", err=True)
+        for failure in summary.failures:
+            typer.echo(f"  {failure}", err=True)
+        typer.echo(f"resume with: bench run --run-id {run.run_id} (same options)", err=True)
+        raise typer.Exit(code=1)
+
+
+def confirm_run_cost(
+    todo: list[Task],
+    models: list[ModelConfig],
+    warehouses: list[WarehouseName],
+    cache: ResponseCache,
+    yes: bool,
+) -> None:
+    """Model calls not yet cached, warehouse queries, and what both cost at most."""
+    total = 0.0
+    for model in models:
+        uncached = []
+        for task in todo:
+            if task.model.id == model.id and cache.get(cache_key(model, task.prompt)) is None:
+                uncached.append(task.prompt)
+        estimate = estimate_cost(model, uncached)
+        total += estimate
+        typer.echo(f"{model.id}: {len(uncached)} model calls, at most ${estimate:.2f}")
+    typer.echo(f"models: at most ${total:.2f} in all")
+    for warehouse in warehouses:
+        # Two predictions per task; gold is at most two more per question, then cached.
+        tasks_here = [task for task in todo if task.warehouse == warehouse]
+        questions_here = {task.question.id for task in tasks_here}
+        queries = 2 * len(tasks_here) + 2 * len(questions_here)
+        typer.echo(f"{warehouse}: {query_cost_estimate(warehouse, queries)}")
+    if not yes and not typer.confirm("Start the run?"):
+        raise typer.Exit(code=1)
+
+
+@app.command("rerun-gold")
+def rerun_gold(
+    warehouses: Annotated[str, typer.Option(help="Comma-separated.")] = "snowflake,databricks",
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Check the dry-run store.")] = False,
+    yes: Annotated[bool, typer.Option("--yes", help="Skip the cost confirmation.")] = False,
+    results_file: Annotated[Path | None, typer.Option()] = None,
+    questions_dir: Annotated[Path, typer.Option("--dir")] = QUESTIONS_DIR,
+    data_dir: Annotated[Path, typer.Option()] = DATA_DIR,
+    manifest_dir: Annotated[Path, typer.Option()] = MANIFESTS_DIR,
+) -> None:
+    """Run every cached gold query again and check its result hash still matches."""
+    chosen_houses = {warehouse.value for warehouse in chosen_warehouses(warehouses)}
+    by_id = {}
+    for path in question_paths(questions_dir):
+        loaded = load_question(path)
+        by_id[loaded.id] = loaded
+    store = ResultStore(results_file or (DRY_RUN_RESULTS_FILE if dry_run else RESULTS_FILE))
+    try:
+        golds = [gold for gold in store.all_gold() if gold.key.warehouse in chosen_houses]
+        if not golds:
+            typer.echo("no cached gold results")
+            return
+        if not dry_run:
+            for warehouse in sorted(chosen_houses):
+                count = sum(1 for gold in golds if gold.key.warehouse == warehouse)
+                typer.echo(f"{warehouse}: {query_cost_estimate(WarehouseName(warehouse), count)}")
+            if not yes and not typer.confirm("Run the gold queries again?"):
+                raise typer.Exit(code=1)
+
+        open_adapter = adapter_factory(dry_run, data_dir)
+        counts = {"match": 0, "within tolerance": 0, "mismatch": 0, "stale": 0}
+        for gold in golds:
+            key = gold.key
+            label = f"{key.question_id} {key.warehouse}/{key.profile}"
+            asked = by_id.get(key.question_id)
+            warehouse = WarehouseName(key.warehouse)
+            profile = Profile(key.profile)
+            gold_sql = asked.gold_sql.for_warehouse(warehouse) if asked else None
+            if (
+                asked is None
+                or gold_sql is None
+                or hashlib.sha256(gold_sql.encode()).hexdigest() != key.gold_sql_sha256
+                or data_sha256(manifest_dir, asked.schema_name, profile) != key.data_sha256
+            ):
+                counts["stale"] += 1
+                typer.echo(f"{label}: stale (gold SQL or data changed since it was cached)")
+                continue
+            adapter = open_adapter(warehouse, asked.schema_name, profile)
+            try:
+                result = adapter.execute(gold_sql, GOLD_TIMEOUT_S)
+            finally:
+                adapter.close()
+            if (
+                result.error is None
+                and result_sha256(result, gold.order_matters) == gold.result_sha256
+            ):
+                counts["match"] += 1
+                continue
+            if result.error is None:
+                scored = score_dataset(
+                    gold.result, result, asked.order_matters, asked.float_tolerance
+                )
+                if scored.outcome == Outcome.CORRECT:
+                    counts["within tolerance"] += 1
+                    typer.echo(f"{label}: hash differs, equal within tolerance")
+                    continue
+            counts["mismatch"] += 1
+            detail = result.error.message if result.error else "different result"
+            typer.echo(f"{label}: MISMATCH ({detail})", err=True)
+    finally:
+        store.close()
+    typer.echo(", ".join(f"{name} {count}" for name, count in counts.items()))
+    if counts["mismatch"]:
         raise typer.Exit(code=1)
