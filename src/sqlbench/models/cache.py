@@ -7,7 +7,9 @@ are stored; a failed call is retried on the next run.
 
 import hashlib
 import json
+import threading
 from pathlib import Path
+from typing import Any
 
 import duckdb
 
@@ -61,20 +63,30 @@ class ResponseCache:
             path.parent.mkdir(parents=True, exist_ok=True)
         self._connection = duckdb.connect(str(path))
         self._connection.execute(SCHEMA)
+        # Worker threads share one cache; a DuckDB connection serves one call at a time.
+        self._lock = threading.Lock()
 
     def get(self, key: str) -> Completion | None:
-        row = self._connection.execute(
-            "SELECT response_text, input_tokens, output_tokens, served_model, stop_reason "
-            "FROM responses WHERE cache_key = ?",
-            [key],
-        ).fetchone()
+        with self._lock:
+            row = self._fetch(key)
         if row is None:
             return None
         text, input_tokens, output_tokens, served_model, stop_reason = row
         return Completion(text, input_tokens, output_tokens, served_model, stop_reason)
 
+    def _fetch(self, key: str) -> tuple[Any, ...] | None:
+        return self._connection.execute(
+            "SELECT response_text, input_tokens, output_tokens, served_model, stop_reason "
+            "FROM responses WHERE cache_key = ?",
+            [key],
+        ).fetchone()
+
     def put(self, key: str, model: ModelConfig, prompt: str, completion: Completion) -> None:
         # The first stored response for a key stays: reruns read it, never replace it.
+        with self._lock:
+            self._insert(key, model, prompt, completion)
+
+    def _insert(self, key: str, model: ModelConfig, prompt: str, completion: Completion) -> None:
         self._connection.execute(
             "INSERT INTO responses (cache_key, model_id, model_version, prompt_sha256, "
             "params_json, response_text, input_tokens, output_tokens, served_model, stop_reason) "

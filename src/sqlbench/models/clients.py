@@ -7,6 +7,7 @@ off so every provider retries the same way (call_with_retries).
 
 import os
 import random
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -225,7 +226,7 @@ def make_client(config: ModelConfig) -> ModelClient:
 
 
 class RateLimiter:
-    """Spaces calls at least 60 / requests_per_minute seconds apart."""
+    """Spaces calls at least 60 / requests_per_minute seconds apart, across threads."""
 
     def __init__(
         self,
@@ -237,13 +238,16 @@ class RateLimiter:
         self._clock = clock
         self._sleep = sleep
         self._last_call: float | None = None
+        self._lock = threading.Lock()
 
     def wait(self) -> None:
-        if self._last_call is not None:
-            remaining = self._last_call + self._interval - self._clock()
-            if remaining > 0:
-                self._sleep(remaining)
-        self._last_call = self._clock()
+        # Sleeping while holding the lock is the point: callers queue up in turn.
+        with self._lock:
+            if self._last_call is not None:
+                remaining = self._last_call + self._interval - self._clock()
+                if remaining > 0:
+                    self._sleep(remaining)
+            self._last_call = self._clock()
 
 
 @dataclass(frozen=True)
