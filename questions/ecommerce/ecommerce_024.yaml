@@ -3,7 +3,8 @@ schema: ecommerce
 question: >-
   For products launched in November 2024, give each product's tags as one
   comma-separated string in alphabetical order, without spaces (an empty
-  string when it has no tags). Return product_id and the tag string.
+  string when it has no tags). A tag listed twice appears twice. Return
+  product_id and the tag string.
 category: dialect_sensitive
 divergence: syntax
 divergence_note: >-

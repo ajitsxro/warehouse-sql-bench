@@ -1,8 +1,9 @@
 id: ecommerce_028
 schema: ecommerce
 question: >-
-  How many products have 0, 1, 2 or 3 entries in their specs? Return the
-  number of entries and the number of products.
+  For each number of entries that occurs in products' specs, how many
+  products have that many? Leave out numbers no product has. Return the number
+  of entries and the number of products.
 category: dialect_sensitive
 divergence: syntax
 divergence_note: >-
