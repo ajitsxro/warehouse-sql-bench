@@ -292,6 +292,8 @@ def parents_of(table: TableSpec) -> set[str]:
     for column in table.columns:
         if column.references is not None:
             parents.add(column.references.split(".")[0])
+    # A self-reference is filled in after the table's own keys, so it is no dependency.
+    parents.discard(table.name)
     return parents
 
 
@@ -301,8 +303,9 @@ def check_reference(schema: SchemaSpec, table: TableSpec, column: ColumnSpec, ta
     if len(parts) != 2:
         raise ValueError(f"{where}: references must look like table.column")
     target_table_name, target_column_name = parts
-    if target_table_name == table.name:
-        raise ValueError(f"{where}: self-references are not supported")
+    # A hierarchy (employee -> manager) needs a NULL parent for its root.
+    if target_table_name == table.name and not column.nullable:
+        raise ValueError(f"{where}: self-references need nullable: true for the root")
     try:
         target_table = schema.table(target_table_name)
     except KeyError:
