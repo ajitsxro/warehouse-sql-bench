@@ -1,0 +1,130 @@
+name: finance_ledger
+description: >
+  A company general ledger: journal entries with lines posted to a chart of
+  accounts, in several currencies, with daily exchange rates to USD. Line
+  amounts are signed (debit positive, credit negative). Lines are generated
+  independently, so an entry's lines do not sum to zero. fx_rates has one row
+  per currency per day up to 2024-12-31, with missing days (up to 3 in a row);
+  rates are independent draws, not a market series, and USD has rows like any
+  other currency.
+
+tables:
+  - name: currencies
+    rows: 10
+    edge_rows: 10
+    primary_key: currency_id
+    columns:
+      - {name: currency_id, type: int, gen: {distribution: sequence}}
+      - name: currency_code
+        type: string
+        gen:
+          distribution: cycle
+          values: [USD, EUR, GBP, JPY, CAD, CHF, AUD, INR, MXN, SGD]
+      - name: minor_units
+        type: int
+        description: Digits after the decimal point in the currency (JPY has 0).
+        gen: {distribution: cycle, values: [2, 2, 2, 0, 2, 2, 2, 2, 2, 2]}
+
+  - name: fx_rates
+    rows: 7000
+    edge_rows: 600
+    primary_key: fx_rate_id
+    series: {key: currency_id, time: rate_date, step: 1d, gap_rate: 0.1, max_gap_steps: 3}
+    columns:
+      - {name: fx_rate_id, type: bigint, gen: {distribution: sequence}}
+      - name: currency_id
+        type: int
+        references: currencies.currency_id
+        gen: {distribution: uniform}
+      - {name: rate_date, type: date, gen: {min: 2024-12-31, max: 2024-12-31}}
+      - name: rate_to_usd
+        type: decimal(18,8)
+        description: USD per one unit of the currency on rate_date.
+        gen: {min: 0.005, max: 1.5}
+
+  - name: accounts
+    rows: 400
+    edge_rows: 150
+    primary_key: account_id
+    columns:
+      - {name: account_id, type: int, gen: {distribution: sequence}}
+      - name: parent_account_id
+        type: int
+        nullable: true
+        description: Roll-up account in the chart of accounts; NULL for the root.
+        references: accounts.account_id
+      - {name: account_code, type: string, gen: {pattern: "####-##"}}
+      - name: account_type
+        type: string
+        gen:
+          values: [asset, liability, equity, revenue, expense]
+          weights: [25, 20, 5, 15, 35]
+      - {name: is_active, type: bool}
+      - {name: opened_on, type: date, gen: {min: 2018-01-01, max: 2024-06-30}}
+
+  - name: journal_entries
+    rows: 120000
+    edge_rows: 800
+    primary_key: entry_id
+    columns:
+      - {name: entry_id, type: bigint, gen: {distribution: sequence}}
+      - {name: entry_date, type: date, gen: {min: 2023-01-01, max: 2024-12-31}}
+      - name: posted_on
+        type: date
+        nullable: true
+        description: NULL while the entry is a draft.
+        gen: {after: entry_date, max_gap_days: 15, null_rate: 0.04}
+      - name: currency_id
+        type: int
+        references: currencies.currency_id
+        gen: {distribution: zipf, exponent: 1.6}
+      - name: source
+        type: string
+        gen:
+          values: [manual, accounts_payable, accounts_receivable, payroll, fx_revaluation]
+          weights: [15, 35, 30, 15, 5]
+      - {name: created_by, type: string, gen: {faker: name, cardinality: 25}}
+      - name: attributes
+        type: variant
+        nullable: true
+        gen:
+          null_rate: 0.1
+          shape:
+            type: object
+            fields:
+              external_ref: {type: string, pattern: "INV-######", optional: 0.4}
+              approval:
+                type: object
+                optional: 0.3
+                fields:
+                  approver: {type: string, values: [controller, cfo, ap_lead, ar_lead]}
+                  level: {type: int, min: 1, max: 3}
+              tags:
+                type: array
+                max_items: 3
+                element: {type: string, values: [accrual, recurring, audit, intercompany]}
+
+  - name: entry_lines
+    rows: 500000
+    edge_rows: 2000
+    primary_key: line_id
+    columns:
+      - {name: line_id, type: bigint, gen: {distribution: sequence}}
+      - name: entry_id
+        type: bigint
+        references: journal_entries.entry_id
+        gen: {distribution: uniform}
+      - name: account_id
+        type: int
+        references: accounts.account_id
+        gen: {distribution: zipf, exponent: 1.1}
+      - name: amount
+        type: decimal(18,2)
+        description: Amount in the entry's currency. Positive is a debit, negative a credit.
+        gen: {distribution: normal, mean: 0, sigma: 4000}
+      - name: cost_center
+        type: string
+        nullable: true
+        gen:
+          values: [CC-100, CC-200, CC-300, CC-400, CC-500]
+          null_rate: 0.4

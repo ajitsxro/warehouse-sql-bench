@@ -1,0 +1,55 @@
+{
+  "schema_name": "finance_ledger",
+  "profile": "edge",
+  "seed": 20261105,
+  "generator_version": 1,
+  "spec_sha256": "a5f2fc4bbe3541875fd4bd6c164194bbf942f9bd0c605684d55542ded4e65092",
+  "pyarrow_version": "26.0.0",
+  "tables": {
+    "currencies": {
+      "rows": 10,
+      "sha256": "eeacdd7c4f47af9fd1597f9df1b9288cddd98a08bc3e7a529d273f499c3b51ff",
+      "injectors": [
+        "empty_groups",
+        "messy_strings"
+      ]
+    },
+    "fx_rates": {
+      "rows": 526,
+      "sha256": "f5d88f1b4d242ac14c6108381f51aca2dd1daf1bc5004523e995f27ad08bb809",
+      "injectors": [
+        "ties"
+      ]
+    },
+    "accounts": {
+      "rows": 150,
+      "sha256": "96a6dbc753a72e4d4701e2c56ee1c5e93e56ebd8e2e347d47d171abbbaa027d3",
+      "injectors": [
+        "empty_groups",
+        "nulls",
+        "boundary_dates",
+        "messy_strings"
+      ]
+    },
+    "journal_entries": {
+      "rows": 800,
+      "sha256": "cffcc97c4fcf0de439821b1b262dd71d1cd1f7bbf2b9df7f4537791db2030b23",
+      "injectors": [
+        "empty_groups",
+        "nulls",
+        "boundary_dates",
+        "semi_structured",
+        "messy_strings"
+      ]
+    },
+    "entry_lines": {
+      "rows": 2000,
+      "sha256": "60a2b07fc2d567e0f75896e209fd3d7833bc3d56629488153c340f3d7f50bdb6",
+      "injectors": [
+        "nulls",
+        "messy_strings",
+        "ties"
+      ]
+    }
+  }
+}
