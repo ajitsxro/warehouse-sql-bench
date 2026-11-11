@@ -1,5 +1,6 @@
 """`bench run` and `bench rerun-gold` end to end: a full dry run on a local DuckDB copy."""
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -194,3 +195,63 @@ def test_unknown_warehouses_are_rejected(workspace: dict[str, Path]) -> None:
     result = bench("run", "--dry-run", "--warehouses", "duckdb", *paths(workspace))
 
     assert result.exit_code == 2
+
+
+def test_freeze_lists_verified_questions_and_the_run_hashes(
+    workspace: dict[str, Path], tmp_path: Path
+) -> None:
+    write_question(
+        workspace["questions"],
+        id="mini_shop_003",
+        status="verified",
+        verified_by="tester",
+        verified_at="2026-11-10",
+    )
+    output = tmp_path / "MANIFEST.json"
+
+    result = bench(
+        "questions",
+        "freeze",
+        "--output",
+        str(output),
+        "--dir",
+        str(workspace["questions"]),
+        "--schemas-dir",
+        str(FIXTURES),
+        "--manifest-dir",
+        str(workspace["root"] / "manifests"),
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "froze 1 verified questions" in result.output
+    manifest = json.loads(output.read_text())
+    assert manifest["question_ids"] == ["mini_shop_003"]
+    assert manifest["scorer_version"] == 1
+    assert set(manifest["data"]["mini_shop"]) == {"main", "edge"}
+
+    bench(
+        "run", "--dry-run", "--run-id", "frozen", "--schemas-dir", str(FIXTURES), *paths(workspace)
+    )
+    run = ResultStore(workspace["results"]).get_run("frozen")
+    assert run is not None
+    assert run.question_set_sha256 == manifest["question_set_sha256"]
+    assert run.prompt_sha256 == manifest["prompt"]["sha256"]
+    assert run.data_manifest_sha256 == manifest["data_manifest_sha256"]
+
+
+def test_freeze_refuses_when_nothing_is_verified(
+    workspace: dict[str, Path], tmp_path: Path
+) -> None:
+    result = bench(
+        "questions",
+        "freeze",
+        "--output",
+        str(tmp_path / "MANIFEST.json"),
+        "--dir",
+        str(workspace["questions"]),
+        "--schemas-dir",
+        str(FIXTURES),
+    )
+
+    assert result.exit_code == 1
+    assert "no verified questions to freeze" in result.output
