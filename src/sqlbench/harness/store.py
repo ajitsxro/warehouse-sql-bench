@@ -5,6 +5,7 @@ set, data and scorer version), so a row can be read on its own without
 joining back to the run.
 """
 
+import datetime
 import threading
 from dataclasses import dataclass, fields
 from pathlib import Path
@@ -155,6 +156,9 @@ class StoredGold:
 
 
 RESULT_COLUMNS = [field.name for field in fields(ResultRow)]
+# created_at defaults to current_timestamp, stored as this machine's local wall
+# time; casting through TIMESTAMPTZ reads it in the session's (local) time zone.
+UTC_CREATED_AT = "timezone('UTC', created_at::TIMESTAMPTZ) AS created_at"
 
 
 class ResultStore:
@@ -243,6 +247,28 @@ class ResultStore:
             values["near_miss"] = tuple(values["near_miss"])
             stored.append(ResultRow(**values))
         return stored
+
+    def results_table(self, run_id: str) -> Any:
+        """A run's result rows as a pyarrow Table, with created_at converted to UTC."""
+        with self._lock:
+            return self._connection.sql(
+                f"SELECT * REPLACE ({UTC_CREATED_AT}) FROM results WHERE run_id = $run_id "
+                "ORDER BY model_id, warehouse, question_id",
+                params={"run_id": run_id},
+            ).to_arrow_table()
+
+    def run_span(self, run_id: str) -> tuple[datetime.datetime, datetime.datetime | None]:
+        """When the run was created and when its last result was stored (UTC)."""
+        with self._lock:
+            row = self._connection.execute(
+                "SELECT timezone('UTC', r.created_at::TIMESTAMPTZ), "
+                "max(timezone('UTC', x.created_at::TIMESTAMPTZ)) FROM runs AS r "
+                "LEFT JOIN results AS x USING (run_id) WHERE r.run_id = ? GROUP BY r.created_at",
+                [run_id],
+            ).fetchone()
+        if row is None:
+            raise KeyError(run_id)
+        return row[0], row[1]
 
     def get_gold(self, key: GoldKey) -> StoredGold | None:
         with self._lock:
