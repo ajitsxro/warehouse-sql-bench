@@ -21,6 +21,12 @@ re-run.
   now says so. (claude-opus-5-5 removed duplicates for hr_people_024 on both
   warehouses; 21% of employees and 17% of products list an element twice.)
 
+Re-run as pilot-2 (same 40-question sample, same two models). Four of the
+five are in the sample; ecommerce_024 isn't, so it has no re-run yet. All
+four are correct for both models on both warehouses, except qwen3-coder on
+Snowflake for hr_people_022: its FLATTEN drops reviews with no scores, so
+the 0 row is missing on edge (a model error).
+
 - Project scaffolding: uv project, `bench` CLI entry point, CI, license.
 - Scorer version 1: result normalization, column and row matching, outcomes,
   lucky_match and near-miss diagnostics, as described in docs/scoring.md.
