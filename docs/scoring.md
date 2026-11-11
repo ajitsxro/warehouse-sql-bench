@@ -218,6 +218,31 @@ Snowflake gold result with `score_dataset`. A question only becomes
 eligible for verification if the two golds are `correct` against each other
 on both datasets, under exactly the rules models are scored by.
 
+## Audit (scorer version 1, pilot-1)
+
+Sample: 40 scored predictions from the pilot run (claude-opus-5-5 and
+qwen3-coder, 40 questions, both warehouses), stratified 20 the scorer
+marked `correct` and 20 it did not, shuffled. The not-correct half was:
+11 syntax_error, 6 wrong_result, 1 wrong_columns, 1 empty_result,
+1 runtime_error. The five questions reworded after the pilot (CHANGELOG)
+were left out. Each item showed the question, both SQL texts and both
+results on main and edge.
+
+Who labelled: a separate Claude agent with no access to the scorer's
+verdicts, not a person. This is weaker evidence than a hand audit: the
+labeller is an LLM, and Claude is also one of the models being scored.
+
+Result: 40 of 40 labels agree with the scorer (20 of 20 correct,
+20 of 20 not), so there were no disagreements to investigate. Three
+items the labeller flagged as close calls, all decided the same way as
+the scorer:
+
+- An extra column not asked for (`wrong_columns`): judged wrong.
+- A midnight timestamp where the question asks for a date: judged wrong,
+  which matches the rule that a date never equals a timestamp.
+- A `NULLIF(channel, '')` the gold doesn't have: judged correct: it
+  changes nothing on these datasets, and the results match on both.
+
 ## Known limits
 
 - The bipartite fallback is skipped for groups above 500 rows (section 3).
