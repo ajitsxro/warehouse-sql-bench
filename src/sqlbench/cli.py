@@ -2,6 +2,7 @@
 
 import datetime
 import hashlib
+import json
 import os
 import shlex
 import subprocess
@@ -481,6 +482,9 @@ def freeze_questions(
     schemas_dir: Annotated[Path, typer.Option("--schemas-dir")] = SCHEMAS_DIR,
     prompt_file: Annotated[Path, typer.Option()] = PROMPT_FILE,
     manifest_dir: Annotated[Path, typer.Option()] = MANIFESTS_DIR,
+    check: Annotated[
+        bool, typer.Option("--check", help="Compare with the existing file instead of writing.")
+    ] = False,
 ) -> None:
     """Write the verified question ids and the input hashes a v1.0 run must match."""
     clean, failed_count = lint_and_load(question_paths(questions_dir), schemas_dir)
@@ -495,6 +499,16 @@ def freeze_questions(
     except ValueError as error:
         typer.echo(str(error), err=True)
         raise typer.Exit(code=1) from error
+    if check:
+        frozen = json.loads(output.read_text())
+        changed = sorted(
+            key for key in manifest.keys() | frozen.keys() if manifest.get(key) != frozen.get(key)
+        )
+        if changed:
+            typer.echo(f"inputs differ from {output}: {', '.join(changed)}", err=True)
+            raise typer.Exit(code=1)
+        typer.echo(f"inputs match {output} ({len(verified)} verified questions)")
+        return
     write_manifest(manifest, output)
     typer.echo(f"froze {len(verified)} verified questions into {output}")
 
