@@ -20,6 +20,7 @@ from sqlbench.datagen.generator import generate_dataset
 from sqlbench.datagen.tables import Profile
 from sqlbench.harness.dry_run import DRY_RUN_MODEL, DryRunWarehouse, GoldAnsweringModel
 from sqlbench.harness.executor import Task, data_sha256
+from sqlbench.harness.freeze import build_manifest, write_manifest
 from sqlbench.harness.run import (
     DEFAULT_WORKERS_PER_WAREHOUSE,
     RunError,
@@ -471,6 +472,31 @@ def verify_questions(
         f"verified {counts[Choice.VERIFY]}, rejected {counts[Choice.REJECT]}, "
         f"skipped {counts[Choice.SKIP]}"
     )
+
+
+@questions_app.command("freeze")
+def freeze_questions(
+    output: Annotated[Path, typer.Option()] = QUESTIONS_DIR / "MANIFEST.json",
+    questions_dir: Annotated[Path, typer.Option("--dir")] = QUESTIONS_DIR,
+    schemas_dir: Annotated[Path, typer.Option("--schemas-dir")] = SCHEMAS_DIR,
+    prompt_file: Annotated[Path, typer.Option()] = PROMPT_FILE,
+    manifest_dir: Annotated[Path, typer.Option()] = MANIFESTS_DIR,
+) -> None:
+    """Write the verified question ids and the input hashes a v1.0 run must match."""
+    clean, failed_count = lint_and_load(question_paths(questions_dir), schemas_dir)
+    if failed_count:
+        typer.echo(f"{failed_count} questions fail lint; fix them before freezing", err=True)
+        raise typer.Exit(code=1)
+    verified = [(path, question) for path, question in clean if question.status == Status.VERIFIED]
+    try:
+        manifest = build_manifest(
+            verified, prompt_file, load_template(prompt_file).sha256, manifest_dir, SCORER_VERSION
+        )
+    except ValueError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from error
+    write_manifest(manifest, output)
+    typer.echo(f"froze {len(verified)} verified questions into {output}")
 
 
 @app.command("generate")
