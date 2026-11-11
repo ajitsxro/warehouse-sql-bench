@@ -255,3 +255,36 @@ def test_freeze_refuses_when_nothing_is_verified(
 
     assert result.exit_code == 1
     assert "no verified questions to freeze" in result.output
+
+
+def test_freeze_check_reports_changed_inputs(workspace: dict[str, Path], tmp_path: Path) -> None:
+    write_question(
+        workspace["questions"],
+        id="mini_shop_003",
+        status="verified",
+        verified_by="tester",
+        verified_at="2026-11-10",
+    )
+    output = tmp_path / "MANIFEST.json"
+    options = [
+        "--output",
+        str(output),
+        "--dir",
+        str(workspace["questions"]),
+        "--schemas-dir",
+        str(FIXTURES),
+        "--manifest-dir",
+        str(workspace["root"] / "manifests"),
+    ]
+    bench("questions", "freeze", *options)
+
+    unchanged = bench("questions", "freeze", "--check", *options)
+    question_file = workspace["questions"] / "mini_shop" / "mini_shop_003.yaml"
+    question_file.write_text(question_file.read_text().replace("easy", "medium"))
+    changed = bench("questions", "freeze", "--check", *options)
+
+    assert unchanged.exit_code == 0, unchanged.output
+    assert "inputs match" in unchanged.output
+    assert changed.exit_code == 1
+    assert "inputs differ" in changed.output
+    assert "question_set_sha256" in changed.output
