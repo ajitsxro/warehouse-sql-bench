@@ -21,6 +21,7 @@ from sqlbench.datagen.generator import generate_dataset
 from sqlbench.datagen.tables import Profile
 from sqlbench.harness.dry_run import DRY_RUN_MODEL, DryRunWarehouse, GoldAnsweringModel
 from sqlbench.harness.executor import Task, data_sha256
+from sqlbench.harness.export import ExportError, export_run
 from sqlbench.harness.freeze import build_manifest, write_manifest
 from sqlbench.harness.run import (
     DEFAULT_WORKERS_PER_WAREHOUSE,
@@ -798,6 +799,29 @@ def confirm_run_cost(
         typer.echo(f"{warehouse}: {query_cost_estimate(warehouse, queries)}")
     if not yes and not typer.confirm("Start the run?"):
         raise typer.Exit(code=1)
+
+
+@app.command("export")
+def export_results(
+    run_id: Annotated[str, typer.Option()],
+    results_file: Annotated[Path, typer.Option()] = RESULTS_FILE,
+    models_file: Annotated[Path, typer.Option()] = MODELS_FILE,
+    frozen_file: Annotated[Path, typer.Option()] = QUESTIONS_DIR / "MANIFEST.json",
+    output_dir: Annotated[Path, typer.Option()] = RESULTS_FILE.parent,
+) -> None:
+    """Write results/run-<id>.parquet and its manifest; refuses an incomplete run."""
+    store = ResultStore(results_file)
+    try:
+        exported = export_run(store, run_id, load_models(models_file), frozen_file, output_dir)
+    except ExportError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from error
+    finally:
+        store.close()
+    typer.echo(
+        f"exported {exported.rows} rows (${exported.cost_usd:.2f} spent) to "
+        f"{exported.parquet_path} and {exported.manifest_path}"
+    )
 
 
 @app.command("rerun-gold")
