@@ -16,7 +16,7 @@ from sqlbench.harness.store import ResultRow
 from sqlbench.questions.model import Question
 from sqlbench.warehouses.base import WarehouseName
 
-CSV_FIELDS = ["model_id", "warehouse", "question_id", "root_cause", "note"]
+CSV_FIELDS = ["run_id", "model_id", "warehouse", "question_id", "root_cause", "note"]
 
 TaskKey = tuple[str, str, str]
 
@@ -43,6 +43,8 @@ AUTO_TO_ROOT_CAUSE = {
 
 @dataclass(frozen=True)
 class HandLabel:
+    # The run whose failure was labelled; a later run may reuse the label.
+    run_id: str
     key: TaskKey
     root_cause: RootCause
     note: str
@@ -140,6 +142,7 @@ def write_label_template(sample: list[ResultRow], path: Path) -> None:
             model_id, warehouse, question_id = task_key(row)
             writer.writerow(
                 {
+                    "run_id": row.run_id,
                     "model_id": model_id,
                     "warehouse": warehouse,
                     "question_id": question_id,
@@ -162,8 +165,28 @@ def read_labels(path: Path) -> list[HandLabel]:
             except ValueError as error:
                 raise ValueError(f"{path}:{line_number}: unknown root cause {cause!r}") from error
             key = (record["model_id"], record["warehouse"], record["question_id"])
-            labels.append(HandLabel(key, root_cause, record["note"].strip()))
+            labels.append(HandLabel(record["run_id"], key, root_cause, record["note"].strip()))
     return labels
+
+
+def labels_for_run(
+    labels: list[HandLabel], labelled_rows: dict[TaskKey, ResultRow], rows: list[ResultRow]
+) -> list[HandLabel]:
+    """The labels that still describe a failure in rows.
+
+    labelled_rows are the rows the labels were made on. A label carries over to
+    another run only if the same task failed there with the same predicted SQL.
+    """
+    current = {task_key(row): row for row in rows}
+    kept = []
+    for label in labels:
+        row = current.get(label.key)
+        labelled = labelled_rows.get(label.key)
+        if row is None or labelled is None or row.outcome == "correct":
+            continue
+        if row.predicted_sql == labelled.predicted_sql:
+            kept.append(label)
+    return kept
 
 
 def agreement(auto: dict[TaskKey, tuple[str, ...]], hand: Iterable[HandLabel]) -> list[Agreement]:

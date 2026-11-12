@@ -11,8 +11,10 @@ from sqlbench.analysis.hand_labels import (
     HandLabel,
     RootCause,
     agreement,
+    labels_for_run,
     read_labels,
     sample_failures,
+    task_key,
     write_label_template,
     write_sheet,
 )
@@ -67,16 +69,16 @@ def test_sheet_and_template_list_the_same_failures(tmp_path: Path) -> None:
 def test_labels_are_read_and_checked(tmp_path: Path) -> None:
     path = tmp_path / "labels.csv"
     path.write_text(
-        "model_id,warehouse,question_id,root_cause,note\n"
-        "a,snowflake,q1,wrong_join, joined twice \n"
-        "a,snowflake,q2,,\n"
+        "run_id,model_id,warehouse,question_id,root_cause,note\n"
+        "r,a,snowflake,q1,wrong_join, joined twice \n"
+        "r,a,snowflake,q2,,\n"
     )
 
     assert read_labels(path) == [
-        HandLabel(("a", "snowflake", "q1"), RootCause.WRONG_JOIN, "joined twice")
+        HandLabel("r", ("a", "snowflake", "q1"), RootCause.WRONG_JOIN, "joined twice")
     ]
 
-    path.write_text("model_id,warehouse,question_id,root_cause,note\na,s,q,bad_cause,\n")
+    path.write_text("run_id,model_id,warehouse,question_id,root_cause,note\nr,a,s,q,bad_cause,\n")
     with pytest.raises(ValueError, match="labels.csv:2: unknown root cause 'bad_cause'"):
         read_labels(path)
 
@@ -89,10 +91,10 @@ def test_agreement_counts_only_auto_labels_with_a_matching_cause() -> None:
         ("a", "snowflake", "q4"): ("lucky_match",),
     }
     hand = [
-        HandLabel(("a", "snowflake", "q1"), RootCause.DIALECT_SYNTAX, ""),
-        HandLabel(("a", "snowflake", "q2"), RootCause.WRONG_JOIN, ""),
-        HandLabel(("a", "snowflake", "q3"), RootCause.SEMANTIC_TRAP, ""),
-        HandLabel(("a", "snowflake", "q4"), RootCause.TIE_HANDLING, ""),
+        HandLabel("r", ("a", "snowflake", "q1"), RootCause.DIALECT_SYNTAX, ""),
+        HandLabel("r", ("a", "snowflake", "q2"), RootCause.WRONG_JOIN, ""),
+        HandLabel("r", ("a", "snowflake", "q3"), RootCause.SEMANTIC_TRAP, ""),
+        HandLabel("r", ("a", "snowflake", "q4"), RootCause.TIE_HANDLING, ""),
     ]
 
     results = {result.auto_label: result for result in agreement(auto, hand)}
@@ -100,3 +102,17 @@ def test_agreement_counts_only_auto_labels_with_a_matching_cause() -> None:
     assert set(results) == {"dialect_leak", "semantics_trap"}
     assert (results["dialect_leak"].labelled, results["dialect_leak"].agreeing) == (2, 1)
     assert (results["semantics_trap"].labelled, results["semantics_trap"].agreeing) == (1, 1)
+
+
+def test_a_label_carries_over_only_for_the_same_failing_sql() -> None:
+    old = [failure("a", "snowflake", 1), failure("a", "snowflake", 2), failure("a", "snowflake", 3)]
+    labels = [HandLabel("old", task_key(row), RootCause.WRONG_JOIN, "") for row in old]
+    new = [
+        old[0],
+        replace(old[1], predicted_sql="SELECT 2"),
+        replace(old[2], outcome="correct"),
+    ]
+
+    kept = labels_for_run(labels, {task_key(row): row for row in old}, new)
+
+    assert [label.key for label in kept] == [task_key(old[0])]
