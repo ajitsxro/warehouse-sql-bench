@@ -44,6 +44,8 @@ class ReportInputs:
     manifest: dict[str, object]
     guard_checks: list[GuardCheck] | None
     hand_labels: list[HandLabel]
+    # Who made labels.csv, as the report should state it ("by hand", "by an LLM agent").
+    labeller: str
 
 
 def percent(value: float) -> str:
@@ -372,7 +374,7 @@ def guard_section(inputs: ReportInputs) -> list[str]:
 
 
 def hand_label_section(inputs: ReportInputs) -> list[str]:
-    lines = ["## 7. Hand-labelled root causes", ""]
+    lines = ["## 7. Labelled root causes", ""]
     labels = inputs.hand_labels
     if not labels:
         return lines + ["No labels yet: fill in `results/labels.csv`.", ""]
@@ -384,7 +386,11 @@ def hand_label_section(inputs: ReportInputs) -> list[str]:
         for cause in RootCause
         if any(counts[w][cause] for w in WAREHOUSES)
     ]
-    lines += [f"{len(labels)} failures labelled by hand.", ""]
+    lines += [
+        f"Failures labelled: {len(labels)}, {inputs.labeller}. A label made on an earlier "
+        "run is kept only where the same task failed with the same SQL.",
+        "",
+    ]
     lines += table(["root cause", *WAREHOUSES], rows)
     lines += ["### Agreement with automatic labels", ""]
     agreements = agreement(inputs.data.labels, labels)

@@ -118,6 +118,9 @@ def report_command(
     questions_dir: Annotated[Path, typer.Option("--dir")] = QUESTIONS_DIR,
     schemas_dir: Annotated[Path, typer.Option("--schemas-dir")] = SCHEMAS_DIR,
     labels_file: Annotated[Path, typer.Option()] = LABELS_FILE,
+    labeller: Annotated[str, typer.Option(help="Who made labels.csv, as the report says it.")] = (
+        "by hand"
+    ),
     output_root: Annotated[Path, typer.Option()] = REPORTS_DIR,
 ) -> None:
     """Write reports/<version>/README.md and charts from an exported run."""
@@ -155,5 +158,7 @@ def report_command(
             hand += labels_for_run(from_run, labelled_rows, rows)
 
     data = RunData(rows, {question_id: questions[question_id] for question_id in run_ids}, labels)
-    path = write_report(ReportInputs(data, manifest, guard_checks, hand), output_root / version)
+    path = write_report(
+        ReportInputs(data, manifest, guard_checks, hand, labeller), output_root / version
+    )
     typer.echo(f"wrote {path}")
