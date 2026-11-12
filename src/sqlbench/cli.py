@@ -17,7 +17,7 @@ import typer
 import yaml
 from dotenv import load_dotenv
 
-from sqlbench.analysis.commands import analysis_app
+from sqlbench.analysis.commands import analysis_app, report_command
 from sqlbench.datagen.generator import generate_dataset
 from sqlbench.datagen.tables import Profile
 from sqlbench.harness.dry_run import DRY_RUN_MODEL, DryRunWarehouse, GoldAnsweringModel
@@ -96,6 +96,7 @@ app.add_typer(data_app, name="data")
 questions_app = typer.Typer(no_args_is_help=True, help="Lint, check and verify questions.")
 app.add_typer(questions_app, name="questions")
 app.add_typer(analysis_app, name="analysis")
+app.command("report")(report_command)
 
 
 @app.callback()
