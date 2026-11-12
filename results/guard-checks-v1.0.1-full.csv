@@ -1,0 +1,2 @@
+model_id,warehouse,question_id,accepted,warehouse_error
+gpt-6-astra,databricks,hr_people_006,yes,

@@ -30,3 +30,6 @@ results/*
 # Exported runs are the published results.
 !results/run-*.parquet
 !results/run-*.manifest.json
+# Inputs to the report: hand labels and guard re-checks.
+!results/labels.csv
+!results/guard-checks-*.csv

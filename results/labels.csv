@@ -1,0 +1,81 @@
+run_id,model_id,warehouse,question_id,root_cause,note
+v1-full,arctic-text2sql-r1-7b,snowflake,ecommerce_035,dialect_syntax,SQLite DATE() with modifiers
+v1-full,gemini-4-carbon,databricks,hr_people_018,other,no SQL produced
+v1-full,arctic-text2sql-r1-7b,databricks,hr_people_026,other,"misread question: compares whole arrays, aggregate in GROUP BY"
+v1-full,qwen3-coder,databricks,hr_people_025,tie_handling,collect_list without ordering; array order nondeterministic
+v1-full,arctic-text2sql-r1-7b,snowflake,ecommerce_026,wrong_join,uses order_items table instead of attributes.items cart
+v1-full,arctic-text2sql-r1-7b,snowflake,ecommerce_023,dialect_syntax,SQLite strftime
+v1-full,arctic-text2sql-r1-7b,databricks,hr_people_007,wrong_grain,groups by each descendant instead of the top direct report
+v1-full,arctic-text2sql-r1-7b,databricks,hr_people_029,other,"treats scores map as struct, never explodes it; HAVING NULL=NULL empties"
+v1-full,arctic-text2sql-r1-7b,snowflake,ecommerce_006,dialect_syntax,"SQLite DATE(x, 'start of month')"
+v1-full,arctic-text2sql-r1-7b,snowflake,hr_people_029,dialect_syntax,SQLite json_each
+v1-full,deepseek-v4-pro-0813,databricks,hr_people_023,wrong_grain,adds zero-count months not asked for
+v1-full,deepseek-v4-pro-0813,databricks,ecommerce_026,dialect_syntax,explode on VARIANT; needs variant_explode
+v1-full,gemini-4-carbon,databricks,hr_people_023,wrong_grain,adds zero-count months not asked for
+v1-full,deepseek-v4-pro-0813,databricks,hr_people_010,other,no SQL produced
+v1-full,arctic-text2sql-r1-7b,databricks,hr_people_025,other,orders array via outer ORDER BY on ungrouped column
+v1-full,claude-opus-5-5,databricks,hr_people_023,wrong_grain,adds zero-count months not asked for
+v1-full,deepseek-v4-pro-0813,databricks,ecommerce_030,other,no SQL produced
+v1-full,arctic-text2sql-r1-7b,snowflake,hr_people_015,dialect_syntax,SQLite strftime
+v1-full,arctic-text2sql-r1-7b,databricks,ecommerce_028,wrong_grain,COUNT(specs) instead of size(specs); aggregate in GROUP BY
+v1-full,arctic-text2sql-r1-7b,databricks,hr_people_033,dialect_syntax,SQLite strftime on Databricks
+v1-full,deepseek-v4-pro-0813,databricks,hr_people_025,other,no SQL produced
+v1-full,qwen3-coder,snowflake,hr_people_012,date_boundary,DATE_TRUNC returns timestamp; date was required
+v1-full,arctic-text2sql-r1-7b,snowflake,hr_people_035,dialect_syntax,SQLite julianday
+v1-full,arctic-text2sql-r1-7b,snowflake,hr_people_014,wrong_join,join reversed: matches reviewer's manager not employee's
+v1-full,arctic-text2sql-r1-7b,databricks,ecommerce_036,null_handling,ignores JSON null; compares VARIANT to '{}' string
+v1-full,qwen3-coder,databricks,ecommerce_012,other,COUNT(*) placed before INTERSECT; malformed set query
+v1-full,qwen3-coder,snowflake,hr_people_034,semantic_trap,"Snowflake DATEDIFF year counts boundaries, not completed years"
+v1-full,arctic-text2sql-r1-7b,snowflake,ecommerce_020,other,LIKE on array column; treats tags as string
+v1-full,claude-opus-5-5,snowflake,ecommerce_030,dialect_syntax,correlated FLATTEN in EXISTS unsupported on Snowflake
+v1-full,deepseek-v4-pro-0813,snowflake,hr_people_026,semantic_trap,Snowflake ARRAY_INTERSECTION keeps duplicates; needs ARRAY_DISTINCT
+v1-full,qwen3-coder,databricks,hr_people_030,dialect_syntax,COLLECT_MAP does not exist on Databricks
+v1-full,arctic-text2sql-r1-7b,databricks,ecommerce_018,dialect_syntax,SQLite strftime and Postgres AT TIME ZONE
+v1-full,arctic-text2sql-r1-7b,databricks,ecommerce_017,dialect_syntax,JSON_EXTRACT (MySQL/SQLite) on Databricks
+v1-full,gemini-4-carbon,databricks,ecommerce_021,dialect_syntax,variant_explode used in LATERAL VIEW; not a generator
+v1-full,qwen3-coder,snowflake,hr_people_015,dialect_syntax,SEQ is not a Snowflake column; needs SEQ4()
+v1-full,qwen3-coder,snowflake,ecommerce_011,wrong_join,joins raw returns; multiple returns per item fan out
+v1-full,arctic-text2sql-r1-7b,snowflake,ecommerce_004,null_handling,missing COALESCE to 'none' for NULL tier
+v1-full,arctic-text2sql-r1-7b,databricks,ecommerce_011,wrong_join,joins raw returns; multiple returns per item fan out
+v1-full,gemini-4-carbon,snowflake,hr_people_023,wrong_grain,adds zero-count months not asked for
+v1-full,qwen3-coder,snowflake,ecommerce_019,dialect_syntax,"Postgres-style FLATTEN alias f(tag) binds SEQ, not VALUE"
+v1-full,qwen3-coder,databricks,hr_people_026,wrong_grain,FILTER keeps duplicate skills; not distinct shared count
+v1-full,qwen3-coder,databricks,ecommerce_026,dialect_syntax,Snowflake LATERAL FLATTEN on Databricks
+v1-full,arctic-text2sql-r1-7b,databricks,ecommerce_035,dialect_syntax,SQLite DATE() with modifiers
+v1-full,arctic-text2sql-r1-7b,databricks,ecommerce_029,other,IN list against array column; treats tags as scalar
+v1-full,arctic-text2sql-r1-7b,databricks,hr_people_034,dialect_syntax,SQLite strftime on Databricks
+v1-full,deepseek-v4-pro-0813,databricks,ecommerce_015,wrong_filter,excludes Dec 2023 so January change is wrong
+v1-full,qwen3-coder,snowflake,hr_people_004,wrong_filter,unrequested filter on termination_date IS NULL
+v1-full,arctic-text2sql-r1-7b,snowflake,hr_people_020,other,LIKE on array column; treats skills as string
+v1-full,qwen3-coder,databricks,hr_people_021,dialect_syntax,map explode yields two columns; one alias given
+v1-full,arctic-text2sql-r1-7b,snowflake,hr_people_030,dialect_syntax,MySQL JSON_OBJECT; also wrong grain
+v1-full,arctic-text2sql-r1-7b,snowflake,hr_people_021,dialect_syntax,SQLite json_each
+v1-full,arctic-text2sql-r1-7b,snowflake,ecommerce_032,dialect_syntax,SQLite julianday
+v1-full,qwen3-coder,databricks,hr_people_034,date_boundary,FLOOR(days/365) misses leap years for completed years
+v1-full,gemini-4-carbon,databricks,hr_people_007,dialect_syntax,UNION in recursive CTE unsupported on Databricks
+v1-full,qwen3-coder,snowflake,hr_people_030,wrong_grain,groups by raw type then normalizes; duplicate keys
+v1-full,qwen3-coder,databricks,ecommerce_030,dialect_syntax,Postgres UNNEST and dot access on VARIANT
+v1-full,arctic-text2sql-r1-7b,databricks,hr_people_020,other,LIKE on array column; treats skills as string
+v1-full,arctic-text2sql-r1-7b,databricks,hr_people_022,wrong_grain,COUNT(scores) instead of size(scores); aggregate in GROUP BY
+v1-full,qwen3-coder,snowflake,ecommerce_008,other,outer query references out-of-scope alias o
+v1-full,deepseek-v4-pro-0813,snowflake,ecommerce_015,wrong_filter,only 2024 months; January compared with 0 not Dec 2023
+v1-full,gpt-6-astra,databricks,hr_people_006,other,benchmark guard could not parse MAX RECURSION LEVEL clause
+v1-full,deepseek-v4-pro-0813,databricks,ecommerce_021,other,no SQL produced
+v1-full,qwen3-coder,databricks,ecommerce_008,other,outer query references out-of-scope alias o
+v1-full,qwen3-coder,databricks,ecommerce_011,wrong_join,joins raw returns; multiple returns per item fan out
+v1-full,qwen3-coder,databricks,ecommerce_021,dialect_syntax,Snowflake FLATTEN on Databricks
+v1-full,gpt-6-astra,databricks,hr_people_003,wrong_grain,extra department_id output column
+v1-full,qwen3-coder,databricks,hr_people_035,dialect_syntax,LEAST mixes DATE and STRING; Databricks will not coerce
+v1-full,qwen3-coder,snowflake,ecommerce_036,semantic_trap,"'null'::VARIANT is a string, not JSON null"
+v1-full,qwen3-coder,databricks,ecommerce_029,dialect_syntax,Postgres UNNEST on Databricks
+v1-full,qwen3-coder,snowflake,ecommerce_035,date_boundary,hand-rolled month-end logic; Jan 30 overflows past Feb
+v1-full,qwen3-coder,databricks,hr_people_027,other,FROM_JSON on map keys; treats map as JSON string
+v1-full,deepseek-v4-pro-0813,snowflake,ecommerce_025,other,no SQL produced
+v1-full,qwen3-coder,snowflake,hr_people_027,dialect_syntax,correlated FLATTEN in EXISTS unsupported on Snowflake
+v1-full,claude-opus-5-5,snowflake,hr_people_023,wrong_grain,adds zero-count months not asked for
+v1-full,deepseek-v4-pro-0813,databricks,ecommerce_035,other,no SQL produced
+v1-full,qwen3-coder,snowflake,ecommerce_015,other,window function inside WHERE clause
+v1-full,qwen3-coder,snowflake,ecommerce_006,date_boundary,DATE_TRUNC returns timestamp; date was required
+v1-full,qwen3-coder,snowflake,hr_people_033,date_boundary,adds 1 to month difference; off by one
+v1-full,deepseek-v4-pro-0813,databricks,ecommerce_018,dialect_syntax,MySQL CONVERT_TZ on Databricks
+v1-full,deepseek-v4-pro-0813,snowflake,hr_people_034,other,no SQL produced

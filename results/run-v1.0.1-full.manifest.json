@@ -1,0 +1,145 @@
+{
+  "run_id": "v1.0.1-full",
+  "started_at_utc": "2026-11-12T22:31:51.814319",
+  "finished_at_utc": "2026-11-12T22:33:46.012898",
+  "git_sha": "95af4dafa54f7ab0e1fc2c0f7705d829d1845080",
+  "prompt": {
+    "file": "prompts/v1.txt",
+    "sha256": "c8fc3669a18d699d100266432e40210c6f8c25efb94ec6b3370d121cafdfb449"
+  },
+  "question_set_sha256": "a7bfe72a247289c9fc468e894800da93ee754b0c3185637446342c893593e1f5",
+  "questions": 72,
+  "data_manifest_sha256": "82a689091dae66d0411c0283e543416c68665d0f8696e56aa6a06d972df3b1b3",
+  "data": {
+    "ecommerce": {
+      "main": "9bb83d24c0f2e03a76053b8e0374c329d23fb67dab1d8fb65070df464ef9079f",
+      "edge": "94faea8f80b84d82c2c489d9805259a231fcec1cd3d6f1109d5788137f0d4c5b"
+    },
+    "hr_people": {
+      "main": "1aaca3e5cf9e572f8247f04e5d59530e06522501e9373ff5a2d4ed616a9eb09f",
+      "edge": "dfa5bdfdb07aea478ef56228e63145d28ac068ba026915504330a42dbdafba27"
+    }
+  },
+  "scorer_version": 1,
+  "frozen_manifest_sha256": "26ecf8d0d47df8e00f2670ba5902ecfad1491290a79dbe03341970232d8ffd6e",
+  "warehouses": [
+    "snowflake",
+    "databricks"
+  ],
+  "models": [
+    {
+      "id": "claude-opus-5-5",
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "version": "claude-opus-5-5",
+      "served_models": [
+        "claude-opus-5-5"
+      ],
+      "temperature": null,
+      "max_tokens": 16000,
+      "input_usd_per_million": 4.0,
+      "output_usd_per_million": 20.0,
+      "responses": 144,
+      "responses_from_cache": 138,
+      "cost_usd_spent": 0.094456,
+      "cost_usd_at_list_price": 2.285312
+    },
+    {
+      "id": "gpt-6-astra",
+      "provider": "openai",
+      "model": "gpt-6-astra",
+      "version": "gpt-6-astra",
+      "served_models": [
+        "gpt-6-astra"
+      ],
+      "temperature": null,
+      "max_tokens": 16000,
+      "input_usd_per_million": 10.0,
+      "output_usd_per_million": 50.0,
+      "responses": 144,
+      "responses_from_cache": 138,
+      "cost_usd_spent": 0.09854,
+      "cost_usd_at_list_price": 2.5689
+    },
+    {
+      "id": "gemini-4-carbon",
+      "provider": "google",
+      "model": "gemini-4-carbon",
+      "version": "gemini-4-carbon",
+      "served_models": [
+        "gemini-4-carbon"
+      ],
+      "temperature": 0.0,
+      "max_tokens": 16000,
+      "input_usd_per_million": 2.0,
+      "output_usd_per_million": 10.0,
+      "responses": 144,
+      "responses_from_cache": 138,
+      "cost_usd_spent": 0.052772,
+      "cost_usd_at_list_price": 1.755074
+    },
+    {
+      "id": "qwen3-coder",
+      "provider": "openrouter",
+      "model": "qwen/qwen3-coder",
+      "version": "qwen/qwen3-coder",
+      "served_models": [
+        "qwen/qwen3-coder via DeepInfra",
+        "qwen/qwen3-coder via Venice"
+      ],
+      "temperature": 0.0,
+      "max_tokens": 8192,
+      "input_usd_per_million": 0.3,
+      "output_usd_per_million": 1.0,
+      "responses": 144,
+      "responses_from_cache": 138,
+      "cost_usd_spent": 0.002739,
+      "cost_usd_at_list_price": 0.074688
+    },
+    {
+      "id": "deepseek-v4-pro-0813",
+      "provider": "openrouter",
+      "model": "deepseek/deepseek-v4-pro-0813",
+      "version": "deepseek/deepseek-v4-pro-0813",
+      "served_models": [
+        "deepseek/deepseek-v4-pro-0813 via CoreWeave",
+        "deepseek/deepseek-v4-pro-0813 via DigitalOcean",
+        "deepseek/deepseek-v4-pro-0813 via Nebius",
+        "deepseek/deepseek-v4-pro-0813 via Novita",
+        "deepseek/deepseek-v4-pro-0813 via Sail Research",
+        "deepseek/deepseek-v4-pro-0813 via StreamLake",
+        "deepseek/deepseek-v4-pro-0813 via Together",
+        "deepseek/deepseek-v4-pro-0813 via Wafer"
+      ],
+      "temperature": 0.0,
+      "max_tokens": 16000,
+      "input_usd_per_million": 0.111,
+      "output_usd_per_million": 4.44,
+      "responses": 144,
+      "responses_from_cache": 138,
+      "cost_usd_spent": 0.056025,
+      "cost_usd_at_list_price": 1.883877
+    },
+    {
+      "id": "arctic-text2sql-r1-7b",
+      "provider": "ollama",
+      "model": "hf.co/mradermacher/Arctic-Text2SQL-R1-7B-GGUF:Q8_0",
+      "version": "Snowflake/Arctic-Text2SQL-R1-7B GGUF Q8_0",
+      "served_models": [
+        "hf.co/mradermacher/Arctic-Text2SQL-R1-7B-GGUF:Q8_0"
+      ],
+      "temperature": 0.0,
+      "max_tokens": 4096,
+      "input_usd_per_million": 0.0,
+      "output_usd_per_million": 0.0,
+      "responses": 144,
+      "responses_from_cache": 138,
+      "cost_usd_spent": 0.0,
+      "cost_usd_at_list_price": 0.0
+    }
+  ],
+  "rows": 864,
+  "cost_usd_spent": 0.304532,
+  "cost_usd_at_list_price": 8.567851,
+  "parquet_sha256": "8e944bc22e39f2fb39d2d17f9cfcc791e3a9252899e7afd0a74b09c5828a99c2"
+}
