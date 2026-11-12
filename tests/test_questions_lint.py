@@ -87,6 +87,15 @@ def test_ids_must_be_unique_across_schemas(tmp_path: Path) -> None:
     assert f"id mini_shop_001 is also used by {first}" in problems[second]
 
 
+def test_a_hyphen_split_by_yaml_folding_is_reported(tmp_path: Path) -> None:
+    folded = "Label months as 'YYYY- MM', for example '2024-03'."
+
+    assert lint_one(tmp_path, question=folded) == [
+        "question text has 'Y- M': a hyphen split across lines"
+    ]
+    assert lint_one(tmp_path, question="A comma-separated list - in order.") == []
+
+
 def test_unknown_schema(tmp_path: Path) -> None:
     assert lint_one(tmp_path, schema="nowhere") == ["unknown schema nowhere"]
 

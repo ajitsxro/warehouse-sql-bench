@@ -4,6 +4,7 @@ Nothing here touches a warehouse. Table and column names are resolved with
 sqlglot against the schema spec, in each gold's own dialect.
 """
 
+import re
 from collections.abc import Callable
 from pathlib import Path
 
@@ -19,6 +20,10 @@ from sqlbench.schema.spec import SchemaSpec, load_schema
 from sqlbench.schema.types import LogicalType
 from sqlbench.warehouses.base import WarehouseName
 from sqlbench.warehouses.guard import check_read_only
+
+# YAML's folded style turns a line break into a space, so "lower-" at the end of
+# one line and "cased" on the next reads "lower- cased" in the question text.
+FOLDED_HYPHEN = re.compile(r"\w- \w")
 
 GOLD_DIALECTS: dict[WarehouseName, Callable[[LogicalType], str]] = {
     WarehouseName.SNOWFLAKE: snowflake_type,
@@ -48,6 +53,9 @@ def lint_files(paths: list[Path], schemas_dir: Path) -> dict[Path, list[str]]:
             found.append(f"id {question.id} is also used by {first_path_by_id[question.id]}")
         else:
             first_path_by_id[question.id] = path
+
+        for match in FOLDED_HYPHEN.finditer(question.question):
+            found.append(f"question text has '{match.group()}': a hyphen split across lines")
 
         schema_path = schemas_dir / f"{question.schema_name}.yaml"
         if question.schema_name not in schemas and schema_path.exists():
