@@ -43,23 +43,23 @@ Difficulty: 21 easy, 34 medium, 17 hard.
 
 ## How the questions were written and verified
 
-1. **Drafting.** Questions and both golds were drafted with an AI coding
+1. Drafting. Questions and both golds were drafted with an AI coding
    assistant (Claude), schema by schema. Each covers features the schema
    was designed for: JSON paths, arrays, maps, hierarchies, history tables
    and decimals.
-2. **Semantics probes.** Each candidate semantics trap was first run as a
+2. Semantics probes. Each candidate semantics trap was first run as a
    small probe on both warehouses (`docs/semantics_probes.md`). Traps that
    didn't reproduce were dropped.
-3. **Lint** (`bench questions lint`). Format, schema references in each
+3. Lint (`bench questions lint`). Format, schema references in each
    dialect, the read-only guard, bare table names, deterministic LIMIT,
    and no hyphen split by YAML line folding.
-4. **Gold check** (`bench questions check`). The Snowflake and Databricks
+4. Gold check (`bench questions check`). The Snowflake and Databricks
    golds must give the same normalized result, scored by the benchmark's
    own scorer, on both main and edge.
-5. **Review.** The maintainer reviewed the questions in
+5. Review. The maintainer reviewed the questions in
    `bench questions verify`. All 72 were then stamped verified in one batch
    on 2026-11-10, rather than one keypress per question.
-6. **Changes after results.** These are allowed only to fix a verified
+6. Changes after results. These are allowed only to fix a verified
    error, and are logged in `CHANGELOG.md`. Eight questions were reworded
    with gold SQL unchanged: five after the pilot (ambiguous zero counts and
    duplicate elements) and three after the first full run (one ambiguity,
