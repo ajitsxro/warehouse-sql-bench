@@ -1,8 +1,8 @@
 id: hr_people_023
 schema: hr_people
 question: >-
-  How many employees were hired in each month of 2024? Label months as 'YYYY-
-  MM', for example '2024-03'.
+  How many employees were hired in each month of 2024? Leave out months with no
+  hires. Label months as 'YYYY-MM', for example '2024-03'.
 category: dialect_sensitive
 divergence: syntax
 divergence_note: >-

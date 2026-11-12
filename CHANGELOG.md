@@ -6,6 +6,21 @@ the reason, and the affected questions are re-run.
 
 ## Unreleased
 
+### Question changes after results (v1-full, 2026-11-12)
+
+Wording only; gold SQL unchanged. Found in the Part 12 error analysis of run
+v1-full. Affected questions are re-run in a new run on v1.0.1-inputs.
+
+- hr_people_023: "hired in each month of 2024" could mean listing all 12
+  months. Main data has 2024 hires only in January to June, and gold lists
+  only months with hires; the question now says to leave out months with no
+  hires. (claude-opus-5-5 and gemini-4-carbon listed all 12 months on both
+  warehouses, deepseek-v4-pro-0813 on Databricks.) Also fixes the next item.
+- hr_people_023, ecommerce_014, hr_people_028: YAML line folding split a
+  hyphenated word across lines, so models saw 'YYYY- MM', "lower- cased" and
+  "comma- separated". Only the 'YYYY- MM' format string could change an
+  answer. Lint now rejects a hyphen followed by a space between letters.
+
 ### Question changes after results (pilot-1, 2026-11-10)
 
 Wording only; gold SQL unchanged. Found when a model's answer was a fair

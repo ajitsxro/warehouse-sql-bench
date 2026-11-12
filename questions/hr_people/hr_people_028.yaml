@@ -1,9 +1,9 @@
 id: hr_people_028
 schema: hr_people
 question: >-
-  For reviews 1 through 20, list the competencies they score as a comma-
-  separated string in alphabetical order, without spaces (an empty string when
-  none). Return review_id and the string.
+  For reviews 1 through 20, list the competencies they score as a
+  comma-separated string in alphabetical order, without spaces (an empty
+  string when none). Return review_id and the string.
 category: dialect_sensitive
 divergence: syntax
 divergence_note: >-
