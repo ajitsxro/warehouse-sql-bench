@@ -26,7 +26,6 @@ data/
 
 # run outputs stay local; only the directory itself is tracked
 results/*
-!results/.gitkeep
 # Exported runs are the published results.
 !results/run-*.parquet
 !results/run-*.manifest.json

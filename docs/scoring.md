@@ -148,7 +148,7 @@ before any model run.
   compared pairwise. Sorting can pair rows badly when several numeric
   columns are each within tolerance, so if the pairwise check fails the
   matcher looks for any pairing (a bipartite matching). That fallback is
-  O(n²) per group and is skipped above 500 rows in one group. Such a group
+  O(n^2) per group and is skipped above 500 rows in one group. Such a group
   is then judged by the sorted pairing alone, which can only err towards
   "not equal".
 
