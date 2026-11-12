@@ -20,7 +20,9 @@ def test_errors_lose_request_ids_and_query_echoes() -> None:
 def test_report_writes_readme_and_charts(tmp_path: Path) -> None:
     data = run_data()
     guard = [GuardCheck("weak", "databricks", "mini_shop_002", True, "")]
-    hand = [HandLabel(("weak", "databricks", "mini_shop_002"), RootCause.DIALECT_SYNTAX, "")]
+    hand = [
+        HandLabel("test", ("weak", "databricks", "mini_shop_002"), RootCause.DIALECT_SYNTAX, "")
+    ]
 
     path = write_report(ReportInputs(data, MANIFEST, guard, hand), tmp_path)
 

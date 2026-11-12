@@ -10,6 +10,7 @@ import typer
 from sqlbench.analysis.functions import FUNCTIONS_DIR, fetch_and_write, load_function_names
 from sqlbench.analysis.guard_check import check_blocks, guard_blocks, read_checks, write_checks
 from sqlbench.analysis.hand_labels import (
+    labels_for_run,
     read_labels,
     sample_failures,
     task_key,
@@ -143,10 +144,15 @@ def report_command(
 
     guard_path = guard_checks_path(run, results_dir)
     guard_checks = read_checks(guard_path) if guard_path.exists() else None
-    stored = set(labels)
     hand = []
     if labels_file.exists():
-        hand = [label for label in read_labels(labels_file) if label.key in stored]
+        all_labels = read_labels(labels_file)
+        for labelled_run in sorted({label.run_id for label in all_labels}):
+            labelled_rows = {
+                task_key(row): row for row in load_run(run_parquet_path(labelled_run, results_dir))
+            }
+            from_run = [label for label in all_labels if label.run_id == labelled_run]
+            hand += labels_for_run(from_run, labelled_rows, rows)
 
     data = RunData(rows, {question_id: questions[question_id] for question_id in run_ids}, labels)
     path = write_report(ReportInputs(data, manifest, guard_checks, hand), output_root / version)
