@@ -1,0 +1,5 @@
+The question files in this directory (questions, gold SQL and their metadata)
+are licensed under the Creative Commons Attribution 4.0 International License
+(CC BY 4.0): https://creativecommons.org/licenses/by/4.0/
+
+The code that generates the datasets is MIT licensed; see ../LICENSE.
