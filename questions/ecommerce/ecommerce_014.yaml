@@ -1,8 +1,8 @@
 id: ecommerce_014
 schema: ecommerce
 question: >-
-  For returns requested in 2024 (UTC), report per reason (trimmed, lower-
-  cased) the number of returns and the total refund amount.
+  For returns requested in 2024 (UTC), report per reason (trimmed,
+  lower-cased) the number of returns and the total refund amount.
 category: portable
 divergence: none
 features: [aggregate, string_fn]
