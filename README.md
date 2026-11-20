@@ -82,28 +82,6 @@ uv run bench export --run-id my-run
 uv run bench report --run my-run --version my-report
 ```
 
-The dry run scores 122 of 144 tasks. The other 22 use warehouse features
-DuckDB doesn't have. Paid commands print a cost estimate and wait for
-confirmation. A run can be resumed with the same `--run-id`.
-
-Reproducing v1.0 costs about $8.57 in model calls at list price. Warehouse
-use was on trial credits and wasn't metered.
-
-## Limitations
-
-- 72 questions on 2 schemas. Four more schemas are defined but have no
-  questions yet.
-- Synthetic data, zero-shot, one prompt, one sample per question. A
-  one-character wording fix flipped 2 answers, so small differences are
-  noise.
-- Answers were generated 2026-11-10 to 2026-11-12. Claude and GPT ran at
-  default temperature (their APIs reject 0), the rest at 0. OpenRouter
-  models were served by several hosts. Arctic ran locally as an 8-bit GGUF.
-- The failure root-cause labels and the scorer audit were done by an LLM,
-  not a person.
-- Snowflake reports an unknown function as a runtime error and Databricks
-  as a syntax error, so those counts don't compare directly.
-
 ## Related work
 
 [Spider 2.0](https://spider2-sql.github.io/) (ICLR 2025) evaluates
